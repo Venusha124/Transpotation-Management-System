@@ -125,14 +125,14 @@ export default function FuelPage() {
         <div className="glass-panel stat-card" style={{ padding: '16px' }}>
           <div>
             <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Accumulated Fuel Expense</span>
-            <h3 style={{ fontSize: '24px', fontWeight: 800, marginTop: '4px', color: 'var(--accent-danger)' }}>${totalFuelCost.toLocaleString()}</h3>
+            <h3 style={{ fontSize: '24px', fontWeight: 800, marginTop: '4px', color: 'var(--accent-danger)' }}>LKR {totalFuelCost.toLocaleString()}</h3>
           </div>
         </div>
 
         <div className="glass-panel stat-card" style={{ padding: '16px' }}>
           <div>
             <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Average Price Per Liter</span>
-            <h3 style={{ fontSize: '24px', fontWeight: 800, marginTop: '4px', color: 'var(--secondary)' }}>${avgFuelPrice.toFixed(2)}/L</h3>
+            <h3 style={{ fontSize: '24px', fontWeight: 800, marginTop: '4px', color: 'var(--secondary)' }}>LKR {avgFuelPrice.toFixed(2)}/L</h3>
           </div>
         </div>
       </div>
@@ -169,8 +169,8 @@ export default function FuelPage() {
                       <td style={{ fontWeight: 600, color: 'var(--secondary)' }}>{v ? v.number : 'Unknown Vehicle'}</td>
                       <td>{d ? d.name : 'Unknown Driver'}</td>
                       <td>{log.liters.toLocaleString()} L</td>
-                      <td style={{ fontWeight: 600, color: 'var(--accent-danger)' }}>${log.cost.toLocaleString()}</td>
-                      <td>${(log.cost / log.liters).toFixed(2)}/L</td>
+                      <td style={{ fontWeight: 600, color: 'var(--accent-danger)' }}>LKR {log.cost.toLocaleString()}</td>
+                      <td>LKR {(log.cost / log.liters).toFixed(2)}/L</td>
                       <td>{log.mileage.toLocaleString()} km</td>
                     </tr>
                   );
@@ -220,7 +220,7 @@ export default function FuelPage() {
                   <input type="number" step="0.01" className="form-input" required value={liters} onChange={(e) => setLiters(e.target.value)} placeholder="e.g. 120.50" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Refueling Cost ($)</label>
+                  <label className="form-label">Refueling Cost (LKR)</label>
                   <input type="number" step="0.01" className="form-input" required value={cost} onChange={(e) => setCost(e.target.value)} placeholder="e.g. 241.00" />
                 </div>
               </div>

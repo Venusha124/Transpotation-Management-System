@@ -250,7 +250,7 @@ export default function DriversPage() {
                     <td>{driver.contact}</td>
                     <td>{driver.licenseNumber}</td>
                     <td>{driver.experience} years</td>
-                    <td>${driver.salary.toLocaleString()}</td>
+                    <td>LKR {driver.salary.toLocaleString()}</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-warning)' }}>
                         <Star size={14} fill="currentColor" />
@@ -337,7 +337,7 @@ export default function DriversPage() {
                   <input type="number" className="form-input" required value={experience} onChange={(e) => setExperience(e.target.value)} placeholder="e.g. 8" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Monthly Salary ($)</label>
+                  <label className="form-label">Monthly Salary (LKR)</label>
                   <input type="number" className="form-input" required value={salary} onChange={(e) => setSalary(e.target.value)} placeholder="e.g. 3200" />
                 </div>
               </div>

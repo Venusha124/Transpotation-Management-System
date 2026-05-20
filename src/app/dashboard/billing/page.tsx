@@ -112,7 +112,7 @@ export default function BillingPage() {
                         {p.transactionId || `INV-${p.id.toUpperCase().slice(0, 8)}`}
                       </td>
                       <td style={{ fontSize: '12px' }}>{p.bookingId.slice(0, 8)}...</td>
-                      <td style={{ fontWeight: 700 }}>${p.amount.toFixed(2)}</td>
+                      <td style={{ fontWeight: 700 }}>LKR {p.amount.toFixed(2)}</td>
                       <td>{p.method}</td>
                       <td>{new Date(p.createdAt).toLocaleDateString()}</td>
                       <td>
@@ -218,7 +218,7 @@ export default function BillingPage() {
                     <td style={{ padding: '12px 0' }}>{selectedInvoice.b.cargoDetails}</td>
                     <td style={{ textAlign: 'center' }}>{selectedInvoice.b.deliveryType}</td>
                     <td style={{ textAlign: 'right' }}>{selectedInvoice.b.weight.toLocaleString()} kg</td>
-                    <td style={{ textAlign: 'right' }}>${selectedInvoice.p.amount.toFixed(2)}</td>
+                    <td style={{ textAlign: 'right' }}>LKR {selectedInvoice.p.amount.toFixed(2)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -232,9 +232,9 @@ export default function BillingPage() {
                   <span style={{ color: 'var(--text-muted)' }}>Payment status:</span>
                 </div>
                 <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '8px', fontWeight: 600 }}>
-                  <span>${(selectedInvoice.p.amount * 0.9).toFixed(2)}</span>
-                  <span>${(selectedInvoice.p.amount * 0.1).toFixed(2)}</span>
-                  <strong style={{ fontSize: '16px', color: 'var(--secondary)' }}>${selectedInvoice.p.amount.toFixed(2)}</strong>
+                  <span>LKR {(selectedInvoice.p.amount * 0.9).toFixed(2)}</span>
+                  <span>LKR {(selectedInvoice.p.amount * 0.1).toFixed(2)}</span>
+                  <strong style={{ fontSize: '16px', color: 'var(--secondary)' }}>LKR {selectedInvoice.p.amount.toFixed(2)}</strong>
                   <span style={{ color: selectedInvoice.p.status === 'PAID' ? 'var(--accent-success)' : 'var(--accent-warning)' }}>
                     {selectedInvoice.p.status}
                   </span>

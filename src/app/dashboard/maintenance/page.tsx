@@ -114,7 +114,7 @@ export default function MaintenancePage() {
           <div>
             <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Total Maintenance Cost</span>
             <h3 style={{ fontSize: '24px', fontWeight: 800, marginTop: '4px' }}>
-              ${logs.reduce((sum, log) => sum + log.cost, 0).toLocaleString()}
+              LKR {logs.reduce((sum, log) => sum + log.cost, 0).toLocaleString()}
             </h3>
           </div>
         </div>
@@ -168,7 +168,7 @@ export default function MaintenancePage() {
                       <td style={{ fontWeight: 600 }}>{log.type}</td>
                       <td>{log.description}</td>
                       <td>{log.partsUsed || 'N/A'}</td>
-                      <td>${log.cost.toLocaleString()}</td>
+                      <td>LKR {log.cost.toLocaleString()}</td>
                       <td>{new Date(log.scheduledDate).toLocaleDateString()}</td>
                       <td>{log.completedDate ? new Date(log.completedDate).toLocaleDateString() : 'Pending'}</td>
                       <td>
@@ -221,7 +221,7 @@ export default function MaintenancePage() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Service Cost ($)</label>
+                  <label className="form-label">Service Cost (LKR)</label>
                   <input type="number" className="form-input" required value={cost} onChange={(e) => setCost(e.target.value)} placeholder="e.g. 450" />
                 </div>
               </div>

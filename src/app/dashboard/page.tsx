@@ -151,7 +151,7 @@ export default function DashboardOverview() {
         <div className="glass-panel stat-card">
           <div>
             <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>Revenue Ledger</span>
-            <h2 style={{ fontSize: '32px', fontWeight: 800, marginTop: '8px', color: 'var(--text-primary)' }}>${stats?.totalRevenue.toLocaleString()}</h2>
+            <h2 style={{ fontSize: '32px', fontWeight: 800, marginTop: '8px', color: 'var(--text-primary)' }}>LKR {stats?.totalRevenue.toLocaleString()}</h2>
             <p style={{ fontSize: '11px', color: 'var(--accent-success)', marginTop: '6px' }}>Paid Transactions</p>
           </div>
           <div className="stat-card-icon" style={{ background: 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.2)', color: 'var(--accent-warning)' }}>
@@ -162,7 +162,7 @@ export default function DashboardOverview() {
         <div className="glass-panel stat-card">
           <div>
             <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>Fuel Expenses</span>
-            <h2 style={{ fontSize: '32px', fontWeight: 800, marginTop: '8px', color: 'var(--text-primary)' }}>${stats?.totalFuelCost.toLocaleString()}</h2>
+            <h2 style={{ fontSize: '32px', fontWeight: 800, marginTop: '8px', color: 'var(--text-primary)' }}>LKR {stats?.totalFuelCost.toLocaleString()}</h2>
             <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>{stats?.totalFuelUsed.toLocaleString()} Liters consumed</p>
           </div>
           <div className="stat-card-icon" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)', color: 'var(--accent-danger)' }}>
