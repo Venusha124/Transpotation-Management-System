@@ -1,0 +1,470 @@
+{
+  "users": [
+    {
+      "id": "u-admin-1",
+      "email": "admin@tms.com",
+      "passwordHash": "$2a$10$954tHw6K/ZkG.a9bLwZ45O0lH.4r1f2w.b3F0o.t1Lw/1O1Gg/a6W",
+      "name": "Super Administrator",
+      "role": "ADMIN",
+      "createdAt": "2026-05-20T14:27:05.295Z",
+      "updatedAt": "2026-05-20T14:27:05.295Z"
+    },
+    {
+      "id": "u-manager-1",
+      "email": "manager@tms.com",
+      "passwordHash": "$2a$10$954tHw6K/ZkG.a9bLwZ45O0lH.4r1f2w.b3F0o.t1Lw/1O1Gg/a6W",
+      "name": "John Manager",
+      "role": "TRANSPORT_MANAGER",
+      "createdAt": "2026-05-20T14:27:05.295Z",
+      "updatedAt": "2026-05-20T14:27:05.295Z"
+    },
+    {
+      "id": "u-dispatcher-1",
+      "email": "dispatcher@tms.com",
+      "passwordHash": "$2a$10$954tHw6K/ZkG.a9bLwZ45O0lH.4r1f2w.b3F0o.t1Lw/1O1Gg/a6W",
+      "name": "Sarah Dispatcher",
+      "role": "DISPATCHER",
+      "createdAt": "2026-05-20T14:27:05.295Z",
+      "updatedAt": "2026-05-20T14:27:05.295Z"
+    },
+    {
+      "id": "u-driver-1",
+      "email": "driver@tms.com",
+      "passwordHash": "$2a$10$954tHw6K/ZkG.a9bLwZ45O0lH.4r1f2w.b3F0o.t1Lw/1O1Gg/a6W",
+      "name": "Marcus Driver",
+      "role": "DRIVER",
+      "createdAt": "2026-05-20T14:27:05.295Z",
+      "updatedAt": "2026-05-20T14:27:05.295Z"
+    },
+    {
+      "id": "u-accountant-1",
+      "email": "accountant@tms.com",
+      "passwordHash": "$2a$10$954tHw6K/ZkG.a9bLwZ45O0lH.4r1f2w.b3F0o.t1Lw/1O1Gg/a6W",
+      "name": "Elena Accountant",
+      "role": "ACCOUNTANT",
+      "createdAt": "2026-05-20T14:27:05.295Z",
+      "updatedAt": "2026-05-20T14:27:05.295Z"
+    },
+    {
+      "id": "u-customer-1",
+      "email": "customer@tms.com",
+      "passwordHash": "$2a$10$954tHw6K/ZkG.a9bLwZ45O0lH.4r1f2w.b3F0o.t1Lw/1O1Gg/a6W",
+      "name": "Acme Logistics Customer",
+      "role": "CUSTOMER",
+      "createdAt": "2026-05-20T14:27:05.295Z",
+      "updatedAt": "2026-05-20T14:27:05.295Z"
+    },
+    {
+      "id": "u-b5i283w3q",
+      "email": "myadmin@tms.com",
+      "passwordHash": "$2b$10$Z0bMGx.cITLPgQ8FYapHY.Ui8tVYHUFpGW5l8JkRU.VMkFWxWrSKO",
+      "name": "Admin User",
+      "role": "TRANSPORT_MANAGER",
+      "createdAt": "2026-05-20T14:35:32.614Z",
+      "updatedAt": "2026-05-20T14:35:32.615Z"
+    },
+    {
+      "id": "u-mjivvz1ts",
+      "email": "newcustomer@tms.com",
+      "passwordHash": "$2b$10$8Ki79gbLmH4Ce75h3yp5pOGO97MPX5ZQGxHcdiC3.pfA1qdKycBue",
+      "name": "Customer",
+      "role": "CUSTOMER",
+      "createdAt": "2026-05-20T15:09:44.318Z",
+      "updatedAt": "2026-05-20T15:09:44.318Z"
+    },
+    {
+      "id": "u-6xab4s7ba",
+      "email": "newaccountant@tms.com",
+      "passwordHash": "$2b$10$AoB4G3AY.KRkIRthN1jYBe2QfkMJfGmYjN3/jf/b0qe1j7iLQRg6K",
+      "name": "Accountant",
+      "role": "ACCOUNTANT",
+      "createdAt": "2026-05-20T15:12:06.963Z",
+      "updatedAt": "2026-05-20T15:12:06.963Z"
+    }
+  ],
+  "vehicles": [
+    {
+      "id": "v-1",
+      "number": "V-TRUCK-8899",
+      "type": "Heavy Cargo Truck",
+      "capacity": 15000,
+      "model": "FH16",
+      "brand": "Volvo",
+      "fuelType": "Diesel",
+      "insuranceExpiry": "2026-06-19T14:27:05.295Z",
+      "licenseExpiry": "2026-08-18T14:27:05.295Z",
+      "availability": true,
+      "status": "Available",
+      "createdAt": "2026-05-20T14:27:05.295Z",
+      "updatedAt": "2026-05-20T14:27:05.295Z"
+    },
+    {
+      "id": "v-2",
+      "number": "V-VAN-4433",
+      "type": "Delivery Van",
+      "capacity": 2500,
+      "model": "Transit",
+      "brand": "Ford",
+      "fuelType": "Petrol",
+      "insuranceExpiry": "2026-05-15T14:27:05.295Z",
+      "licenseExpiry": "2026-11-16T14:27:05.295Z",
+      "availability": true,
+      "status": "Maintenance",
+      "createdAt": "2026-05-20T14:27:05.295Z",
+      "updatedAt": "2026-05-20T14:27:05.295Z"
+    },
+    {
+      "id": "v-3",
+      "number": "V-LORRY-5511",
+      "type": "Flatbed Lorry",
+      "capacity": 8000,
+      "model": "Canter",
+      "brand": "Mitsubishi",
+      "fuelType": "Diesel",
+      "insuranceExpiry": "2026-09-17T14:27:05.295Z",
+      "licenseExpiry": "2026-06-01T14:27:05.295Z",
+      "availability": false,
+      "status": "Active",
+      "createdAt": "2026-05-20T14:27:05.295Z",
+      "updatedAt": "2026-05-20T14:27:05.295Z"
+    }
+  ],
+  "drivers": [
+    {
+      "id": "d-1",
+      "name": "Marcus Driver",
+      "nic": "991234567V",
+      "contact": "+1-555-0199",
+      "address": "456 Route Ave, Logistics Town",
+      "licenseNumber": "DL-99887766",
+      "experience": 8,
+      "emergencyContact": "+1-555-0100 (Wife)",
+      "salary": 3200,
+      "availability": false,
+      "attendanceStatus": "Present",
+      "rating": 4.8,
+      "userId": "u-driver-1",
+      "createdAt": "2026-05-20T14:27:05.295Z",
+      "updatedAt": "2026-05-20T14:27:05.295Z"
+    },
+    {
+      "id": "d-2",
+      "name": "Robert Miller",
+      "nic": "882345678V",
+      "contact": "+1-555-0211",
+      "address": "789 Freight Rd, Cargo City",
+      "licenseNumber": "DL-55443322",
+      "experience": 12,
+      "emergencyContact": "+1-555-0200 (Son)",
+      "salary": 3800,
+      "availability": true,
+      "attendanceStatus": "Present",
+      "rating": 4.9,
+      "userId": null,
+      "createdAt": "2026-05-20T14:27:05.295Z",
+      "updatedAt": "2026-05-20T14:27:05.295Z"
+    }
+  ],
+  "trips": [
+    {
+      "id": "t-1",
+      "trackingNumber": "TRIP-2026-0001",
+      "driverId": "d-1",
+      "vehicleId": "v-3",
+      "pickup": "Colombo Port, Warehouse A",
+      "destination": "Jaffna Central Depot",
+      "weight": 7500,
+      "cargoType": "Electronics",
+      "status": "IN_PROGRESS",
+      "eta": "6 hours",
+      "routePoints": "[[6.9271,79.8612],[7.4863,80.3647],[7.8731,80.6514],[8.3114,80.4037],[8.7542,80.4982],[9.3803,80.3992],[9.6615,80.0255]]",
+      "currentLat": 7.8731,
+      "currentLng": 80.6514,
+      "startAt": "2026-05-20T14:36:37.782Z",
+      "endAt": null,
+      "createdAt": "2026-05-20T14:27:05.295Z",
+      "updatedAt": "2026-05-20T14:36:37.786Z"
+    }
+  ],
+  "bookings": [
+    {
+      "id": "b-1",
+      "customerId": "u-customer-1",
+      "pickup": "Orugodawatta Yard, Colombo",
+      "destination": "Kandy Goods Yard",
+      "weight": 1200,
+      "cargoDetails": "Boxed Apparel - 50 cartons",
+      "deliveryType": "Standard",
+      "status": "APPROVED",
+      "paymentStatus": "PAID",
+      "scheduledTime": "2026-05-22T14:27:05.295Z",
+      "tripId": null,
+      "createdAt": "2026-05-20T14:27:05.295Z",
+      "updatedAt": "2026-05-20T14:27:05.295Z"
+    },
+    {
+      "id": "b-2",
+      "customerId": "u-customer-1",
+      "pickup": "Express Center, Colombo",
+      "destination": "Galle Fort Depot",
+      "weight": 3400,
+      "cargoDetails": "Medical Supplies",
+      "deliveryType": "Express",
+      "status": "PENDING",
+      "paymentStatus": "PENDING",
+      "scheduledTime": "2026-05-21T14:27:05.295Z",
+      "tripId": null,
+      "createdAt": "2026-05-20T14:27:05.295Z",
+      "updatedAt": "2026-05-20T14:27:05.295Z"
+    },
+    {
+      "id": "b-gm5d1ekcw",
+      "customerId": "u-mjivvz1ts",
+      "pickup": "Test",
+      "destination": "Test",
+      "weight": 7500,
+      "cargoDetails": "Test",
+      "deliveryType": "Standard",
+      "status": "APPROVED",
+      "paymentStatus": "PAID",
+      "scheduledTime": "2026-05-21T00:00:00.000Z",
+      "createdAt": "2026-05-20T15:10:39.339Z",
+      "updatedAt": "2026-05-20T15:14:26.416Z"
+    }
+  ],
+  "maintenance": [
+    {
+      "id": "m-1",
+      "vehicleId": "v-2",
+      "type": "Oil Change",
+      "description": "Scheduled preventive maintenance oil & filter change",
+      "cost": 150,
+      "status": "SCHEDULED",
+      "scheduledDate": "2026-05-22T14:27:05.295Z",
+      "completedDate": null,
+      "partsUsed": "Synthetic Oil, Oil Filter",
+      "createdAt": "2026-05-20T14:27:05.295Z",
+      "updatedAt": "2026-05-20T14:27:05.295Z"
+    }
+  ],
+  "fuelLogs": [
+    {
+      "id": "f-1",
+      "vehicleId": "v-3",
+      "driverId": "d-1",
+      "liters": 120.5,
+      "cost": 216.9,
+      "mileage": 45200,
+      "date": "2026-05-19T14:27:05.295Z",
+      "createdAt": "2026-05-20T14:27:05.295Z",
+      "updatedAt": "2026-05-20T14:27:05.295Z"
+    }
+  ],
+  "payments": [
+    {
+      "id": "p-1",
+      "bookingId": "b-1",
+      "amount": 1450,
+      "method": "Card",
+      "status": "PAID",
+      "transactionId": "TXN-CARD-998122",
+      "createdAt": "2026-05-20T14:27:05.295Z",
+      "updatedAt": "2026-05-20T14:27:05.295Z"
+    },
+    {
+      "id": "p-dv34kcc5z",
+      "bookingId": "b-gm5d1ekcw",
+      "amount": 9625,
+      "method": "Cash",
+      "status": "PAID",
+      "createdAt": "2026-05-20T15:10:39.343Z",
+      "updatedAt": "2026-05-20T15:10:58.372Z"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "al-1",
+      "userId": "u-admin-1",
+      "action": "System Setup",
+      "details": "Database initialized with seed profiles.",
+      "timestamp": "2026-05-20T14:27:05.295Z"
+    },
+    {
+      "id": "a-sjqgnx0ex",
+      "userId": "u-b5i283w3q",
+      "action": "Registration",
+      "details": "New account created: Admin User (TRANSPORT_MANAGER)",
+      "createdAt": "2026-05-20T14:35:32.663Z",
+      "updatedAt": "2026-05-20T14:35:32.663Z"
+    },
+    {
+      "id": "a-6khvt55l0",
+      "action": "Update Trip",
+      "details": "Updated status/telemetry of Trip TRIP-2026-0001 to IN_PROGRESS",
+      "createdAt": "2026-05-20T14:36:37.788Z",
+      "updatedAt": "2026-05-20T14:36:37.788Z"
+    },
+    {
+      "id": "a-8mm10q96c",
+      "userId": "u-b5i283w3q",
+      "action": "Login",
+      "details": "Admin User logged into the system.",
+      "createdAt": "2026-05-20T14:43:01.212Z",
+      "updatedAt": "2026-05-20T14:43:01.212Z"
+    },
+    {
+      "id": "a-yxyaw2ugw",
+      "userId": "u-b5i283w3q",
+      "action": "Login",
+      "details": "Admin User logged into the system.",
+      "createdAt": "2026-05-20T14:56:28.125Z",
+      "updatedAt": "2026-05-20T14:56:28.125Z"
+    },
+    {
+      "id": "a-wq0q63vya",
+      "userId": "u-mjivvz1ts",
+      "action": "Registration",
+      "details": "New account created: Customer (CUSTOMER)",
+      "createdAt": "2026-05-20T15:09:44.328Z",
+      "updatedAt": "2026-05-20T15:09:44.328Z"
+    },
+    {
+      "id": "a-4e5ls2mdn",
+      "userId": "u-mjivvz1ts",
+      "action": "Create Booking",
+      "details": "Customer booked cargo shipment ID: b-gm5d1ekcw (Test to Test)",
+      "createdAt": "2026-05-20T15:10:39.349Z",
+      "updatedAt": "2026-05-20T15:10:39.349Z"
+    },
+    {
+      "id": "a-srda2jj3m",
+      "action": "Update Booking",
+      "details": "Updated Booking ID: b-gm5d1ekcw - Status: unchanged, Payment: PAID",
+      "createdAt": "2026-05-20T15:10:58.381Z",
+      "updatedAt": "2026-05-20T15:10:58.381Z"
+    },
+    {
+      "id": "a-i9gqmq7cc",
+      "userId": "u-6xab4s7ba",
+      "action": "Registration",
+      "details": "New account created: Accountant (ACCOUNTANT)",
+      "createdAt": "2026-05-20T15:12:06.971Z",
+      "updatedAt": "2026-05-20T15:12:06.971Z"
+    },
+    {
+      "id": "a-wvi2yu8i1",
+      "userId": "u-6xab4s7ba",
+      "action": "Login",
+      "details": "Accountant logged into the system.",
+      "createdAt": "2026-05-20T15:13:10.300Z",
+      "updatedAt": "2026-05-20T15:13:10.300Z"
+    },
+    {
+      "id": "a-qurtrg2r2",
+      "userId": "u-b5i283w3q",
+      "action": "Login",
+      "details": "Admin User logged into the system.",
+      "createdAt": "2026-05-20T15:13:32.036Z",
+      "updatedAt": "2026-05-20T15:13:32.036Z"
+    },
+    {
+      "id": "a-w22v8o5h2",
+      "action": "Update Booking",
+      "details": "Updated Booking ID: b-gm5d1ekcw - Status: APPROVED, Payment: unchanged",
+      "createdAt": "2026-05-20T15:14:26.420Z",
+      "updatedAt": "2026-05-20T15:14:26.420Z"
+    },
+    {
+      "id": "a-rw5va8oqd",
+      "userId": "u-6xab4s7ba",
+      "action": "Login",
+      "details": "Accountant logged into the system.",
+      "createdAt": "2026-05-20T15:15:29.228Z",
+      "updatedAt": "2026-05-20T15:15:29.228Z"
+    },
+    {
+      "id": "a-ikmiylhwf",
+      "userId": "u-b5i283w3q",
+      "action": "Login",
+      "details": "Admin User logged into the system.",
+      "createdAt": "2026-05-20T15:33:43.120Z",
+      "updatedAt": "2026-05-20T15:33:43.120Z"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "n-1",
+      "userId": "u-admin-1",
+      "title": "Welcome to TMS",
+      "message": "Transportation Management System is successfully initialized.",
+      "read": false,
+      "type": "Alert",
+      "createdAt": "2026-05-20T14:27:05.295Z"
+    },
+    {
+      "id": "n-2",
+      "userId": "u-admin-1",
+      "title": "Insurance Expiry Warning",
+      "message": "Vehicle V-VAN-4433 has an expired insurance policy.",
+      "read": false,
+      "type": "Alert",
+      "createdAt": "2026-05-20T14:27:05.295Z"
+    },
+    {
+      "id": "n-e3978tw9u",
+      "userId": "u-b5i283w3q",
+      "title": "Registration Successful",
+      "message": "Welcome to the Transportation Management System, Admin User! Your account is now active.",
+      "type": "Alert",
+      "createdAt": "2026-05-20T14:35:32.666Z",
+      "updatedAt": "2026-05-20T15:13:55.265Z",
+      "read": true
+    },
+    {
+      "id": "n-r9c2jwgrj",
+      "userId": "u-mjivvz1ts",
+      "title": "Registration Successful",
+      "message": "Welcome to the Transportation Management System, Customer! Your account is now active.",
+      "type": "Alert",
+      "createdAt": "2026-05-20T15:09:44.331Z",
+      "updatedAt": "2026-05-20T15:09:44.331Z"
+    },
+    {
+      "id": "n-igochth0a",
+      "userId": "u-admin-1",
+      "title": "New Cargo Booking",
+      "message": "A new shipment booking request has been submitted by Customer (Test -> Test).",
+      "type": "Alert",
+      "createdAt": "2026-05-20T15:10:39.346Z",
+      "updatedAt": "2026-05-20T15:10:39.346Z"
+    },
+    {
+      "id": "n-eq32f4gme",
+      "userId": "u-mjivvz1ts",
+      "title": "Booking Request Updated",
+      "message": "Your shipment request from Test to Test is now updated (Payment: PAID).",
+      "type": "Alert",
+      "createdAt": "2026-05-20T15:10:58.378Z",
+      "updatedAt": "2026-05-20T15:10:58.378Z"
+    },
+    {
+      "id": "n-mqxlgyuyl",
+      "userId": "u-6xab4s7ba",
+      "title": "Registration Successful",
+      "message": "Welcome to the Transportation Management System, Accountant! Your account is now active.",
+      "type": "Alert",
+      "createdAt": "2026-05-20T15:12:06.974Z",
+      "updatedAt": "2026-05-20T15:12:15.400Z",
+      "read": true
+    },
+    {
+      "id": "n-6gwo54b24",
+      "userId": "u-mjivvz1ts",
+      "title": "Booking Request APPROVED",
+      "message": "Your shipment request from Test to Test is now APPROVED (Payment: Pending).",
+      "type": "Alert",
+      "createdAt": "2026-05-20T15:14:26.419Z",
+      "updatedAt": "2026-05-20T15:14:26.419Z"
+    }
+  ]
+}

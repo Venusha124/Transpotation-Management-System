@@ -1,0 +1,215 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  TRANSPORT_MANAGER
+  DISPATCHER
+  DRIVER
+  CUSTOMER
+  ACCOUNTANT
+}
+
+enum TripStatus {
+  PENDING
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum BookingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum MaintenanceStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  name         String
+  role         Role       @default(CUSTOMER)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  
+  // Relations
+  driverProfile Driver?
+  auditLogs     AuditLog[]
+  notifications Notification[]
+  bookings      Booking[]
+}
+
+model Vehicle {
+  id              String        @id @default(uuid())
+  number          String        @unique
+  type            String        // e.g. Truck, Van, Lorry
+  capacity        Float         // in kg or tons
+  model           String
+  brand           String
+  fuelType        String        // Diesel, Petrol, Hybrid, Electric
+  insuranceExpiry DateTime
+  licenseExpiry   DateTime
+  availability    Boolean       @default(true)
+  status          String        @default("Available") // Available, In Service, Active, Maintenance
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  trips        Trip[]
+  maintenance  Maintenance[]
+  fuelLogs     FuelLog[]
+}
+
+model Driver {
+  id               String      @id @default(uuid())
+  name             String
+  nic              String      @unique
+  contact          String
+  address          String
+  licenseNumber    String      @unique
+  experience       Int         // years
+  emergencyContact String
+  salary           Float
+  availability     Boolean     @default(true)
+  attendanceStatus String      @default("Absent") // Present, Absent, On Leave
+  rating           Float       @default(5.0)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  
+  // Link to User account
+  userId           String?     @unique
+  user             User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Relations
+  trips    Trip[]
+  fuelLogs FuelLog[]
+}
+
+model Trip {
+  id             String     @id @default(uuid())
+  trackingNumber String     @unique
+  driverId       String
+  driver         Driver     @relation(fields: [driverId], references: [id])
+  vehicleId      String
+  vehicle        Vehicle    @relation(fields: [vehicleId], references: [id])
+  pickup         String
+  destination    String
+  weight         Float
+  cargoType      String
+  status         TripStatus @default(PENDING)
+  eta            String     // Expected Time of Arrival text or ISO string
+  routePoints    String     // JSON serialized coordinates array e.g. "[[lat, lng], ...]"
+  currentLat     Float?
+  currentLng     Float?
+  startAt        DateTime?
+  endAt          DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  // Relations
+  booking        Booking?
+}
+
+model Booking {
+  id             String        @id @default(uuid())
+  customerId     String
+  customer       User          @relation(fields: [customerId], references: [id])
+  pickup         String
+  destination    String
+  weight         Float
+  cargoDetails   String
+  deliveryType   String        // Standard, Express
+  status         BookingStatus @default(PENDING)
+  paymentStatus  PaymentStatus @default(PENDING)
+  scheduledTime  DateTime
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Optional linked Trip (once approved & dispatched)
+  tripId         String?       @unique
+  trip           Trip?         @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  payments       Payment[]
+}
+
+model Maintenance {
+  id            String            @id @default(uuid())
+  vehicleId     String
+  vehicle       Vehicle           @relation(fields: [vehicleId], references: [id])
+  type          String            // Oil Change, Tire Replacement, Engine Service, Brake Repair
+  description   String
+  cost          Float
+  status        MaintenanceStatus @default(SCHEDULED)
+  scheduledDate DateTime
+  completedDate DateTime?
+  partsUsed     String?           // JSON array or comma separated text
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+model FuelLog {
+  id        String   @id @default(uuid())
+  vehicleId String
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id])
+  driverId  String
+  driver    Driver   @relation(fields: [driverId], references: [id])
+  liters    Float
+  cost      Float
+  mileage   Float    // Odometer reading at fuel log
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  bookingId     String
+  booking       Booking       @relation(fields: [bookingId], references: [id])
+  amount        Float
+  method        String        // Card, Bank, Cash, Mobile
+  status        PaymentStatus @default(PENDING)
+  transactionId String?       @unique
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  details   String
+  timestamp DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  type      String   // Email, SMS, Push, Alert
+  createdAt DateTime @default(now())
+}
