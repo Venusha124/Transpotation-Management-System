@@ -270,7 +270,7 @@ export default function AIAnalyticsPage() {
                   <div>
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>BEST VEHICLE FIT MATCHED:</span>
                     <h4 style={{ fontWeight: 700, color: 'var(--accent-success)' }}>
-                      {loadEvaluation.bestFit.brand} {loadEvaluation.bestFit.model} ({loadEvaluation.bestFit.number})
+                      {loadEvaluation.bestFit?.brand} {loadEvaluation.bestFit?.model} ({loadEvaluation.bestFit?.number})
                     </h4>
                   </div>
                 </div>
@@ -289,7 +289,7 @@ export default function AIAnalyticsPage() {
                 <div style={{ background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Est. Transit Fuel Cost / km:</span>
-                    <span style={{ fontWeight: 600 }}>${loadEvaluation.estCostPerKm.toFixed(2)}</span>
+                    <span style={{ fontWeight: 600 }}>${loadEvaluation.estCostPerKm?.toFixed(2)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-light)', paddingTop: '6px', marginTop: '6px' }}>
                     <span style={{ color: 'var(--text-muted)' }}>AI Efficiency Rating:</span>

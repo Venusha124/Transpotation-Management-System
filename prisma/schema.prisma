@@ -1,5 +1,5 @@
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -7,54 +7,15 @@ generator client {
   provider = "prisma-client-js"
 }
 
-enum Role {
-  ADMIN
-  TRANSPORT_MANAGER
-  DISPATCHER
-  DRIVER
-  CUSTOMER
-  ACCOUNTANT
-}
-
-enum TripStatus {
-  PENDING
-  ASSIGNED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-}
-
-enum BookingStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  CANCELLED
-}
-
-enum PaymentStatus {
-  PENDING
-  PAID
-  FAILED
-  REFUNDED
-}
-
-enum MaintenanceStatus {
-  SCHEDULED
-  IN_PROGRESS
-  COMPLETED
-  OVERDUE
-}
-
 model User {
   id           String     @id @default(uuid())
   email        String     @unique
   passwordHash String
   name         String
-  role         Role       @default(CUSTOMER)
+  role         String     @default("CUSTOMER")
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   
-  // Relations
   driverProfile Driver?
   auditLogs     AuditLog[]
   notifications Notification[]
@@ -64,19 +25,19 @@ model User {
 model Vehicle {
   id              String        @id @default(uuid())
   number          String        @unique
-  type            String        // e.g. Truck, Van, Lorry
-  capacity        Float         // in kg or tons
+  type            String        
+  capacity        Float         
   model           String
   brand           String
-  fuelType        String        // Diesel, Petrol, Hybrid, Electric
+  fuelType        String        
   insuranceExpiry DateTime
   licenseExpiry   DateTime
+  totalMileage    Float         @default(0)
   availability    Boolean       @default(true)
-  status          String        @default("Available") // Available, In Service, Active, Maintenance
+  status          String        @default("Available") 
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  // Relations
   trips        Trip[]
   maintenance  Maintenance[]
   fuelLogs     FuelLog[]
@@ -89,20 +50,18 @@ model Driver {
   contact          String
   address          String
   licenseNumber    String      @unique
-  experience       Int         // years
+  experience       Int         
   emergencyContact String
   salary           Float
   availability     Boolean     @default(true)
-  attendanceStatus String      @default("Absent") // Present, Absent, On Leave
+  attendanceStatus String      @default("Absent") 
   rating           Float       @default(5.0)
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
   
-  // Link to User account
   userId           String?     @unique
   user             User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  // Relations
   trips    Trip[]
   fuelLogs FuelLog[]
 }
@@ -118,9 +77,10 @@ model Trip {
   destination    String
   weight         Float
   cargoType      String
-  status         TripStatus @default(PENDING)
-  eta            String     // Expected Time of Arrival text or ISO string
-  routePoints    String     // JSON serialized coordinates array e.g. "[[lat, lng], ...]"
+  status         String     @default("PENDING")
+  eta            String     
+  routePoints    String     
+  waypoints      String     @default("[]")
   currentLat     Float?
   currentLng     Float?
   startAt        DateTime?
@@ -128,7 +88,6 @@ model Trip {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
-  // Relations
   booking        Booking?
 }
 
@@ -140,14 +99,15 @@ model Booking {
   destination    String
   weight         Float
   cargoDetails   String
-  deliveryType   String        // Standard, Express
-  status         BookingStatus @default(PENDING)
-  paymentStatus  PaymentStatus @default(PENDING)
+  deliveryType   String        
+  status         String        @default("PENDING")
+  paymentStatus  String        @default("PENDING")
+  qrScanned      Boolean       @default(false)
+  seatNumber     String?
   scheduledTime  DateTime
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  // Optional linked Trip (once approved & dispatched)
   tripId         String?       @unique
   trip           Trip?         @relation(fields: [tripId], references: [id], onDelete: SetNull)
   payments       Payment[]
@@ -157,13 +117,13 @@ model Maintenance {
   id            String            @id @default(uuid())
   vehicleId     String
   vehicle       Vehicle           @relation(fields: [vehicleId], references: [id])
-  type          String            // Oil Change, Tire Replacement, Engine Service, Brake Repair
+  type          String            
   description   String
   cost          Float
-  status        MaintenanceStatus @default(SCHEDULED)
+  status        String            @default("SCHEDULED")
   scheduledDate DateTime
   completedDate DateTime?
-  partsUsed     String?           // JSON array or comma separated text
+  partsUsed     String?           
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 }
@@ -176,7 +136,7 @@ model FuelLog {
   driver    Driver   @relation(fields: [driverId], references: [id])
   liters    Float
   cost      Float
-  mileage   Float    // Odometer reading at fuel log
+  mileage   Float    
   date      DateTime @default(now())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -187,8 +147,8 @@ model Payment {
   bookingId     String
   booking       Booking       @relation(fields: [bookingId], references: [id])
   amount        Float
-  method        String        // Card, Bank, Cash, Mobile
-  status        PaymentStatus @default(PENDING)
+  method        String        
+  status        String        @default("PENDING")
   transactionId String?       @unique
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -210,6 +170,6 @@ model Notification {
   title     String
   message   String
   read      Boolean  @default(false)
-  type      String   // Email, SMS, Push, Alert
+  type      String   
   createdAt DateTime @default(now())
 }

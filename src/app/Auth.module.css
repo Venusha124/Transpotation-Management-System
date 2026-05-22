@@ -12,15 +12,13 @@
   padding: 20px;
   position: relative;
   overflow: hidden;
-  /* TMS-themed background image with tinted gradient overlay */
+  /* TMS-themed background image with tinted dark cinematic gradient overlay */
   background:
     linear-gradient(
       135deg,
-      rgba(233, 30, 140, 0.72) 0%,
-      rgba(106, 27, 154, 0.75) 30%,
-      rgba(69, 39, 160, 0.78) 55%,
-      rgba(21, 101, 192, 0.82) 80%,
-      rgba(13, 71, 161, 0.88) 100%
+      rgba(2, 6, 23, 0.85) 0%,
+      rgba(15, 23, 42, 0.75) 50%,
+      rgba(88, 28, 135, 0.6) 100%
     ),
     url('/tms_login_bg.png') center center / cover no-repeat;
 }

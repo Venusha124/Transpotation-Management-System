@@ -178,7 +178,7 @@ export default function BillingPage() {
               {/* Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid var(--border-light)', paddingBottom: '20px', marginBottom: '20px' }}>
                 <div>
-                  <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--secondary)' }}>TMS Pro Logistics</h2>
+                  <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--secondary)' }}>Ascendia Transports</h2>
                   <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>100 Port Rd, Colombo, Sri Lanka</p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
@@ -193,7 +193,7 @@ export default function BillingPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '30px', fontSize: '13px' }}>
                 <div>
                   <h4 style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', marginBottom: '6px' }}>SHIP FROM:</h4>
-                  <p style={{ fontWeight: 600 }}>TMS Hub Facility</p>
+                  <p style={{ fontWeight: 600 }}>Ascendia Hub Facility</p>
                   <p>{selectedInvoice.b.pickup}</p>
                 </div>
                 <div>
@@ -243,7 +243,7 @@ export default function BillingPage() {
 
               {/* Footer Stamp */}
               <div style={{ borderTop: '1px dashed var(--border-light)', marginTop: '40px', paddingTop: '16px', textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)' }}>
-                Thank you for using TMS Pro Logistics. Scan Barcode for route optimization verification.
+                Thank you for using Ascendia Transports. Scan Barcode for route optimization verification.
               </div>
             </div>
 

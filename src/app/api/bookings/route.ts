@@ -35,10 +35,26 @@ export async function POST(request: Request) {
     if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
-    const { pickup, destination, weight, cargoDetails, deliveryType, scheduledTime } = body;
+    const { pickup, destination, weight, cargoDetails, deliveryType, scheduledTime, seatNumber, tripId } = body;
 
     if (!pickup || !destination || !weight || !cargoDetails || !deliveryType || !scheduledTime) {
       return NextResponse.json({ error: 'Missing required booking fields' }, { status: 400 });
+    }
+
+    // Duplicate seat check if seatNumber and tripId are provided
+    if (seatNumber && tripId) {
+      const existingBookings = await db.booking.findMany({ where: { tripId } });
+      const requestedSeats = seatNumber.split(',').map((s: string) => s.trim());
+      
+      for (const booking of existingBookings) {
+        if (booking.seatNumber) {
+          const bookedSeats = booking.seatNumber.split(',').map((s: string) => s.trim());
+          const conflict = requestedSeats.find((rs: string) => bookedSeats.includes(rs));
+          if (conflict) {
+            return NextResponse.json({ error: `Seat ${conflict} is already booked for this route run.` }, { status: 409 });
+          }
+        }
+      }
     }
 
     const booking = await db.booking.create({
@@ -47,6 +63,9 @@ export async function POST(request: Request) {
         pickup,
         destination,
         weight: Number(weight),
+        seatNumber: seatNumber || null,
+        qrScanned: false,
+        tripId: tripId || null,
         cargoDetails,
         deliveryType,
         status: "PENDING",
@@ -55,13 +74,39 @@ export async function POST(request: Request) {
       }
     });
 
+    // Calculate Dynamic Surge Pricing based on seat availability
+    let surgeMultiplier = 1.0;
+    let surgeReason = '';
+    
+    if (tripId) {
+      const trip = await db.trip.findUnique({ where: { id: tripId } });
+      if (trip && trip.vehicleId) {
+        const vehicle = await db.vehicle.findUnique({ where: { id: trip.vehicleId } });
+        if (vehicle && vehicle.capacity) {
+          const allBookings = await db.booking.findMany({ where: { tripId } });
+          const totalBookedSeats = allBookings.reduce((sum: number, b: any) => sum + (b.weight || 0), 0) + Number(weight);
+          
+          const capacityUsed = totalBookedSeats / vehicle.capacity;
+          if (capacityUsed >= 0.8) {
+            surgeMultiplier = 1.5; // High demand: >80% full
+            surgeReason = ' (High Demand Surge)';
+          } else if (capacityUsed >= 0.5) {
+            surgeMultiplier = 1.2; // Medium demand: >50% full
+            surgeReason = ' (Standard Demand)';
+          }
+        }
+      }
+    }
+
     // Create Payment record representing the pending invoice
-    const amount = Number(weight) * (deliveryType === 'Express' ? 1.5 : 1.0) * 1.25 + 250; // simple mock fee calculation
+    const baseFare = Number(weight) * (deliveryType === 'Express' ? 1500 : 800); 
+    const finalAmount = baseFare * surgeMultiplier;
+    
     await db.payment.create({
       data: {
         bookingId: booking.id,
-        amount,
-        method: "Cash",
+        amount: finalAmount,
+        method: "Credit Card",
         status: "PENDING"
       }
     });
@@ -72,8 +117,8 @@ export async function POST(request: Request) {
       await db.notification.create({
         data: {
           userId: adminUsers[0].id,
-          title: "New Cargo Booking",
-          message: `A new shipment booking request has been submitted by ${payload.name} (${pickup} -> ${destination}).`,
+          title: "New Passenger Booking",
+          message: `A new ticket booking request has been submitted by ${payload.name} (${pickup} -> ${destination})${surgeReason}.`,
           type: "Alert"
         }
       });
@@ -82,8 +127,8 @@ export async function POST(request: Request) {
     await db.auditLog.create({
       data: {
         userId: payload.id,
-        action: "Create Booking",
-        details: `Customer booked cargo shipment ID: ${booking.id} (${pickup} to ${destination})`
+        action: "Create Ticket",
+        details: `Customer booked passenger ticket ID: ${booking.id} (${pickup} to ${destination})`
       }
     });
 

@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { 
-      driverId, vehicleId, pickup, destination, weight, cargoType, routePoints, eta
+      driverId, vehicleId, pickup, destination, weight, cargoType, routePoints, waypoints, eta
     } = body;
 
     if (!driverId || !vehicleId || !pickup || !destination || !weight || !cargoType || !routePoints || !eta) {
@@ -48,6 +48,7 @@ export async function POST(request: Request) {
         weight: Number(weight),
         cargoType,
         routePoints,
+        waypoints: waypoints || '[]',
         eta,
         status: "ASSIGNED",
         currentLat: null,

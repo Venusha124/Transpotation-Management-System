@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TMS Pro — Transportation Management System",
+  title: "Ascendia Transports",
   description: "Manage vehicles, drivers, trips, bookings, and logistics in one place.",
 };
 

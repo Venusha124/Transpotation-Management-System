@@ -15,12 +15,36 @@ export async function PUT(
       return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
     }
 
-    const { status, currentLat, currentLng, eta } = body;
+    const { status, currentLat, currentLng, eta, delayReason } = body;
     const updateData: any = {};
 
     if (currentLat !== undefined) updateData.currentLat = Number(currentLat);
     if (currentLng !== undefined) updateData.currentLng = Number(currentLng);
     if (eta !== undefined) updateData.eta = eta;
+
+    // Handle Smart Delay Notifications
+    if (delayReason) {
+      updateData.eta = eta || trip.eta + " (Delayed)"; // Fallback if no specific ETA provided
+      
+      // Find all passengers booked on this trip
+      const affectedBookings = await db.booking.findMany({ where: { tripId: id } });
+      const notifiedCustomers = new Set();
+      
+      for (const booking of affectedBookings) {
+        if (!notifiedCustomers.has(booking.customerId)) {
+          notifiedCustomers.add(booking.customerId);
+          
+          await db.notification.create({
+            data: {
+              userId: booking.customerId,
+              title: "Smart Delay Alert",
+              message: `Your trip ${trip.trackingNumber} to ${trip.destination} is experiencing a delay. Reason: ${delayReason}. New ETA: ${updateData.eta}.`,
+              type: "Alert"
+            }
+          });
+        }
+      }
+    }
 
     if (status) {
       updateData.status = status;

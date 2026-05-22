@@ -4,6 +4,7 @@ import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import styles from '../Auth.module.css';
+import { isValidEmail, isValidPassword } from '../../lib/validators';
 
 function LoginForm() {
   const router = useRouter();
@@ -15,25 +16,31 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+
+  const validateFields = (): boolean => {
+    const errors: { email?: string; password?: string } = {};
+    const emailCheck = isValidEmail(email);
+    const passCheck = isValidPassword(password);
+    if (!emailCheck.valid) errors.email = emailCheck.message;
+    if (!passCheck.valid) errors.password = passCheck.message;
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
-
+    if (!validateFields()) return;
+    setLoading(true);
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim(), password }),
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Something went wrong');
-      }
-
+      if (!res.ok) throw new Error(data.error || 'Invalid email or password.');
       router.push(redirectPath);
       router.refresh();
     } catch (err: any) {
@@ -72,16 +79,14 @@ function LoginForm() {
 
   return (
     <div className={styles.authContainer}>
-      {/* ── Background Striped Circles ── */}
-      <div className={`${styles.stripedCircle} ${styles.stripedCircleRight}`} />
-      <div className={`${styles.stripedCircle} ${styles.stripedCircleBottom}`} />
-
       {/* ── Frosted Glass Card ── */}
       <div className={styles.authCard}>
         <div className={styles.logoHeader}>
-          <div className={styles.logoIcon}>T</div>
-          <h2 className={styles.logoTitle}>Login</h2>
-          <p className={styles.logoSubtitle}>Transportation Management System</p>
+          <div className={styles.logoIcon} style={{ background: 'transparent', padding: 0 }}>
+            <img src="/ascendia_logo.png" alt="Ascendia Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '14px', boxShadow: '0 4px 15px rgba(0,0,0,0.5)' }} />
+          </div>
+          <h2 className={styles.logoTitle}>Welcome Back</h2>
+          <p className={styles.logoSubtitle}>ASCENDIA TRANSPORTS</p>
         </div>
 
         {error && (
@@ -94,29 +99,25 @@ function LoginForm() {
         <form onSubmit={handleSubmit}>
           {/* Email */}
           <div className="form-group">
-            <label className={styles.authLabel} htmlFor="email">
-              Username or email
-            </label>
+            <label className={styles.authLabel} htmlFor="email">Email Address</label>
             <input
               id="email"
-              type="email"
+              type="text"
               className={styles.authInput}
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setFieldErrors(p => ({ ...p, email: undefined })); }}
+              onBlur={() => { const r = isValidEmail(email); if (!r.valid) setFieldErrors(p => ({ ...p, email: r.message })); }}
               placeholder="e.g. admin@tms.com"
-              required
+              style={fieldErrors.email ? { borderColor: '#c53030', boxShadow: '0 0 0 2px rgba(197,48,48,0.15)' } : {}}
             />
+            {fieldErrors.email && <span style={{ color: '#fc8181', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠ {fieldErrors.email}</span>}
           </div>
 
           {/* Password */}
           <div className="form-group">
             <div className={styles.labelRow}>
-              <label className={styles.authLabel} htmlFor="password">
-                Password
-              </label>
-              <Link href="/forgot-password" className={styles.forgotLink}>
-                Forgot password ?
-              </Link>
+              <label className={styles.authLabel} htmlFor="password">Password</label>
+              <Link href="/forgot-password" className={styles.forgotLink}>Forgot password?</Link>
             </div>
             <div className={styles.passwordWrapper}>
               <input
@@ -124,10 +125,13 @@ function LoginForm() {
                 type={showPassword ? 'text' : 'password'}
                 className={styles.authInput}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value); setFieldErrors(p => ({ ...p, password: undefined })); }}
+                onBlur={() => { const r = isValidPassword(password); if (!r.valid) setFieldErrors(p => ({ ...p, password: r.message })); }}
                 placeholder="••••••••"
-                style={{ paddingRight: '44px' }}
-                required
+                style={{
+                  paddingRight: '44px',
+                  ...(fieldErrors.password ? { borderColor: '#c53030', boxShadow: '0 0 0 2px rgba(197,48,48,0.15)' } : {})
+                }}
               />
               <button
                 type="button"
@@ -136,13 +140,11 @@ function LoginForm() {
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? (
-                  /* Eye-off SVG */
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
                     <line x1="1" y1="1" x2="23" y2="23"/>
                   </svg>
                 ) : (
-                  /* Eye SVG */
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                     <circle cx="12" cy="12" r="3"/>
@@ -150,6 +152,7 @@ function LoginForm() {
                 )}
               </button>
             </div>
+            {fieldErrors.password && <span style={{ color: '#fc8181', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠ {fieldErrors.password}</span>}
           </div>
 
           <button
@@ -167,40 +170,9 @@ function LoginForm() {
             Sign up
           </Link>
         </div>
-
-        {/* ── Demo Fast Login ── */}
-        <div className={styles.demoSection}>
-          <p className={styles.demoLabel}>Quick Demo Accounts</p>
-          <div className={styles.demoGrid}>
-            <button
-              className={styles.demoBtn}
-              onClick={() => handleQuickLogin('admin@tms.com')}
-              disabled={loading}
-            >
-              👑 Admin
-            </button>
-            <button
-              className={styles.demoBtn}
-              onClick={() => handleQuickLogin('dispatcher@tms.com')}
-              disabled={loading}
-            >
-              ⚡ Dispatcher
-            </button>
-            <button
-              className={styles.demoBtn}
-              onClick={() => handleQuickLogin('driver@tms.com')}
-              disabled={loading}
-            >
-              🚛 Driver
-            </button>
-            <button
-              className={styles.demoBtn}
-              onClick={() => handleQuickLogin('customer@tms.com')}
-              disabled={loading}
-            >
-              👤 Customer
-            </button>
-          </div>
+        
+        <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '11px', marginTop: '30px' }}>
+          &copy; {new Date().getFullYear()} All Rights Reserved by ASCENDIA SOLUTIONS
         </div>
       </div>
     </div>
@@ -211,7 +183,7 @@ export default function LoginPage() {
   return (
     <Suspense fallback={
       <div style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginTop: '40vh', fontSize: '14px' }}>
-        Loading TMS Portal...
+        Loading Ascendia Portal...
       </div>
     }>
       <LoginForm />

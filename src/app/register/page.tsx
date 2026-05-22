@@ -74,8 +74,10 @@ export default function RegisterPage() {
 
       <div className={styles.authCard}>
         <div className={styles.logoHeader}>
-          <div className={styles.logoIcon}>T</div>
-          <h2 className={styles.logoTitle}>Join TMS</h2>
+          <div className={styles.logoIcon} style={{ background: 'transparent', padding: 0 }}>
+            <img src="/ascendia_logo.png" alt="Ascendia Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '14px', boxShadow: '0 4px 15px rgba(0,0,0,0.5)' }} />
+          </div>
+          <h2 className={styles.logoTitle}>Join Ascendia</h2>
           <p className={styles.logoSubtitle}>Create your transportation profile</p>
         </div>
 

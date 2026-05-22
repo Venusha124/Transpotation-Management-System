@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Users, Plus, Edit2, Trash2, Star } from 'lucide-react';
+import { isValidNIC, isValidContact, isRequired, isPositiveNumber, isWithinRange } from '@/lib/validators';
 
 interface Driver {
   id: string;
@@ -38,6 +39,7 @@ export default function DriversPage() {
   const [availability, setAvailability] = useState(true);
   const [rating, setRating] = useState('5.0');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string | undefined }>({});
 
   const fetchDrivers = async () => {
     try {
@@ -69,6 +71,7 @@ export default function DriversPage() {
     setAvailability(true);
     setRating('5.0');
     setError('');
+    setFieldErrors({});
     setModalOpen(true);
   };
 
@@ -86,6 +89,7 @@ export default function DriversPage() {
     setAvailability(driver.availability);
     setRating(driver.rating.toString());
     setError('');
+    setFieldErrors({});
     setModalOpen(true);
   };
 
@@ -113,44 +117,46 @@ export default function DriversPage() {
     }
   };
 
+  const validateFields = () => {
+    const errors: { [key: string]: string | undefined } = {};
+
+    const nameCheck = isRequired(name, 'Driver Name');
+    if (!nameCheck.valid) errors.name = nameCheck.message;
+
+    const nicCheck = isValidNIC(nic);
+    if (!nicCheck.valid) errors.nic = nicCheck.message;
+
+    const contactCheck = isValidContact(contact);
+    if (!contactCheck.valid) errors.contact = contactCheck.message;
+
+    const licCheck = isRequired(licenseNumber, 'License Number');
+    if (!licCheck.valid) errors.licenseNumber = licCheck.message;
+
+    const expCheck = isPositiveNumber(experience, 'Experience');
+    if (!expCheck.valid && experience !== '0') errors.experience = expCheck.message; // 0 is okay for new drivers
+
+    const salCheck = isPositiveNumber(salary, 'Salary');
+    if (!salCheck.valid) errors.salary = salCheck.message;
+
+    const rateCheck = isWithinRange(rating, 1, 5, 'Rating');
+    if (!rateCheck.valid) errors.rating = rateCheck.message;
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // Validate NIC (Sri Lankan format: 9 numbers + V/v/X/x OR 12 numbers)
-    const nicRegex = /^(?:\d{9}[vVxX]|\d{12})$/;
-    if (!nic.trim() || !nicRegex.test(nic.trim())) {
-      setError('Invalid Sri Lankan NIC format (e.g. 199912345678 or 991234567V)');
+    if (!validateFields()) {
+      setError('Please fix the highlighted field errors before submitting.');
       return;
     }
 
-    // Validate Contact number (Sri Lankan mobile: +947xxxxxxxx or 07xxxxxxxx)
-    const contactRegex = /^(?:\+94|0)?7[0-9]{8}$/;
-    const cleanContact = contact.trim().replace(/[\s-]/g, '');
-    if (!contactRegex.test(cleanContact)) {
-      setError('Invalid Sri Lankan contact number (e.g. 0771234567 or +94771234567)');
-      return;
-    }
-
-    // Validate experience and salary
     const expNum = parseInt(experience, 10);
-    if (isNaN(expNum) || expNum < 0) {
-      setError('Experience cannot be negative.');
-      return;
-    }
-
     const salNum = parseFloat(salary);
-    if (isNaN(salNum) || salNum < 0) {
-      setError('Monthly salary cannot be negative.');
-      return;
-    }
-
-    // Validate Rating (between 1.0 and 5.0)
     const rateNum = parseFloat(rating);
-    if (isNaN(rateNum) || rateNum < 1.0 || rateNum > 5.0) {
-      setError('Driver rating must be between 1.0 and 5.0.');
-      return;
-    }
 
     const payload = { name, nic, contact, address, licenseNumber, experience: expNum, emergencyContact, salary: salNum, attendanceStatus, availability, rating: rateNum };
 
@@ -307,22 +313,38 @@ export default function DriversPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
                   <label className="form-label">Driver Name</label>
-                  <input type="text" className="form-input" required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Marcus Driver" />
+                  <input type="text" className="form-input" required value={name} 
+                    onChange={(e) => { setName(e.target.value); setFieldErrors(p => ({ ...p, name: undefined })); }} 
+                    onBlur={() => { const r = isRequired(name, 'Driver Name'); if (!r.valid) setFieldErrors(p => ({ ...p, name: r.message })); }}
+                    placeholder="e.g. Marcus Driver" style={fieldErrors.name ? { borderColor: '#fc8181' } : {}} />
+                  {fieldErrors.name && <span style={{ color: '#fc8181', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠ {fieldErrors.name}</span>}
                 </div>
                 <div className="form-group">
                   <label className="form-label">NIC / Passport</label>
-                  <input type="text" className="form-input" required value={nic} onChange={(e) => setNic(e.target.value)} placeholder="e.g. 991234567V" />
+                  <input type="text" className="form-input" required value={nic} 
+                    onChange={(e) => { setNic(e.target.value); setFieldErrors(p => ({ ...p, nic: undefined })); }} 
+                    onBlur={() => { const r = isValidNIC(nic); if (!r.valid) setFieldErrors(p => ({ ...p, nic: r.message })); }}
+                    placeholder="e.g. 991234567V" style={fieldErrors.nic ? { borderColor: '#fc8181' } : {}} />
+                  {fieldErrors.nic && <span style={{ color: '#fc8181', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠ {fieldErrors.nic}</span>}
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
                   <label className="form-label">Contact Number</label>
-                  <input type="text" className="form-input" required value={contact} onChange={(e) => setContact(e.target.value)} placeholder="e.g. +1-555-0199" />
+                  <input type="text" className="form-input" required value={contact} 
+                    onChange={(e) => { setContact(e.target.value); setFieldErrors(p => ({ ...p, contact: undefined })); }} 
+                    onBlur={() => { const r = isValidContact(contact); if (!r.valid) setFieldErrors(p => ({ ...p, contact: r.message })); }}
+                    placeholder="e.g. +94771234567" style={fieldErrors.contact ? { borderColor: '#fc8181' } : {}} />
+                  {fieldErrors.contact && <span style={{ color: '#fc8181', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠ {fieldErrors.contact}</span>}
                 </div>
                 <div className="form-group">
                   <label className="form-label">License Number</label>
-                  <input type="text" className="form-input" required value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} placeholder="e.g. DL-99887766" />
+                  <input type="text" className="form-input" required value={licenseNumber} 
+                    onChange={(e) => { setLicenseNumber(e.target.value); setFieldErrors(p => ({ ...p, licenseNumber: undefined })); }} 
+                    onBlur={() => { const r = isRequired(licenseNumber, 'License'); if (!r.valid) setFieldErrors(p => ({ ...p, licenseNumber: r.message })); }}
+                    placeholder="e.g. DL-99887766" style={fieldErrors.licenseNumber ? { borderColor: '#fc8181' } : {}} />
+                  {fieldErrors.licenseNumber && <span style={{ color: '#fc8181', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠ {fieldErrors.licenseNumber}</span>}
                 </div>
               </div>
 
@@ -334,22 +356,35 @@ export default function DriversPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
                   <label className="form-label">Experience (Years)</label>
-                  <input type="number" className="form-input" required value={experience} onChange={(e) => setExperience(e.target.value)} placeholder="e.g. 8" />
+                  <input type="number" className="form-input" required value={experience} 
+                    onChange={(e) => { setExperience(e.target.value); setFieldErrors(p => ({ ...p, experience: undefined })); }} 
+                    onBlur={() => { const r = isPositiveNumber(experience, 'Experience'); if (!r.valid && experience !== '0') setFieldErrors(p => ({ ...p, experience: r.message })); }}
+                    placeholder="e.g. 8" style={fieldErrors.experience ? { borderColor: '#fc8181' } : {}} />
+                  {fieldErrors.experience && <span style={{ color: '#fc8181', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠ {fieldErrors.experience}</span>}
                 </div>
                 <div className="form-group">
                   <label className="form-label">Monthly Salary (LKR)</label>
-                  <input type="number" className="form-input" required value={salary} onChange={(e) => setSalary(e.target.value)} placeholder="e.g. 3200" />
+                  <input type="number" className="form-input" required value={salary} 
+                    onChange={(e) => { setSalary(e.target.value); setFieldErrors(p => ({ ...p, salary: undefined })); }} 
+                    onBlur={() => { const r = isPositiveNumber(salary, 'Salary'); if (!r.valid) setFieldErrors(p => ({ ...p, salary: r.message })); }}
+                    placeholder="e.g. 3200" style={fieldErrors.salary ? { borderColor: '#fc8181' } : {}} />
+                  {fieldErrors.salary && <span style={{ color: '#fc8181', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠ {fieldErrors.salary}</span>}
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
                   <label className="form-label">Emergency Contact</label>
-                  <input type="text" className="form-input" required value={emergencyContact} onChange={(e) => setEmergencyContact(e.target.value)} placeholder="e.g. +1-555-0100 (Wife)" />
+                  <input type="text" className="form-input" required value={emergencyContact} 
+                    onChange={(e) => setEmergencyContact(e.target.value)} placeholder="e.g. +94771234567 (Wife)" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Performance Rating</label>
-                  <input type="number" step="0.1" min="1" max="5" className="form-input" required value={rating} onChange={(e) => setRating(e.target.value)} />
+                  <input type="number" step="0.1" min="1" max="5" className="form-input" required value={rating} 
+                    onChange={(e) => { setRating(e.target.value); setFieldErrors(p => ({ ...p, rating: undefined })); }} 
+                    onBlur={() => { const r = isWithinRange(rating, 1, 5, 'Rating'); if (!r.valid) setFieldErrors(p => ({ ...p, rating: r.message })); }}
+                    style={fieldErrors.rating ? { borderColor: '#fc8181' } : {}} />
+                  {fieldErrors.rating && <span style={{ color: '#fc8181', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠ {fieldErrors.rating}</span>}
                 </div>
               </div>
 

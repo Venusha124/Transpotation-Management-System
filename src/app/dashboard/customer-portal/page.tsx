@@ -1,7 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { FolderClock, Plus, Search, MapPin, Compass } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Bell, Ticket, MapPin, FolderClock, Home, Eye, Search, Plus, Compass, CheckCircle2, RefreshCw } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import SeatMap from '@/components/SeatMap';
+import { isFutureDate } from '@/lib/validators';
 
 interface Booking {
   id: string;
@@ -13,34 +16,56 @@ interface Booking {
   status: string;
   paymentStatus: string;
   scheduledTime: string;
+  seatNumber?: string;
+  tripId?: string;
 }
 
 interface Trip {
+  id: string;
   trackingNumber: string;
   pickup: string;
   destination: string;
   status: string;
   eta: string;
-  currentLat?: number;
-  currentLng?: number;
-  routePoints: string;
+  cargoType: string;
+  vehicleId?: string;
+  waypoints?: string;
 }
 
-export default function CustomerPortalPage() {
+export default function PassengerAppPage() {
+  const [user, setUser] = useState<any>(null);
+  
+  // Navigation
+  const [activeTab, setActiveTab] = useState<'home' | 'book' | 'track' | 'tickets'>('home');
+  
+  // Data State
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [availableTrips, setAvailableTrips] = useState<Trip[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  
+  // Tracking State
   const [searchTracking, setSearchTracking] = useState('');
   const [trackedTrip, setTrackedTrip] = useState<Trip | null>(null);
   const [trackError, setTrackError] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [error, setError] = useState('');
-
-  // Form states
-  const [pickup, setPickup] = useState('');
-  const [destination, setDestination] = useState('');
-  const [weight, setWeight] = useState('');
-  const [cargoDetails, setCargoDetails] = useState('');
+  
+  // Booking Form State
+  const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
+  const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [deliveryType, setDeliveryType] = useState('Standard');
   const [scheduledTime, setScheduledTime] = useState('');
+  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string | undefined }>({});
+  const [bookingSuccess, setBookingSuccess] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/auth/me').then(res => res.json()).then(data => {
+      if (data.user) setUser(data.user);
+    }).catch(console.error);
+
+    fetch('/api/trips').then(res => res.json()).then(data => setAvailableTrips(data.trips || []));
+    fetch('/api/vehicles').then(res => res.json()).then(data => setVehicles(data.vehicles || []));
+    fetchCustomerBookings();
+  }, []);
 
   const fetchCustomerBookings = async () => {
     try {
@@ -49,20 +74,40 @@ export default function CustomerPortalPage() {
         const data = await res.json();
         setBookings(data.bookings);
       }
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
-  useEffect(() => {
-    fetchCustomerBookings();
-  }, []);
+  const validateFields = () => {
+    const errors: { [key: string]: string | undefined } = {};
+    const dateCheck = isFutureDate(scheduledTime, 'Travel Date');
+    if (!dateCheck.valid) errors.scheduledTime = dateCheck.message;
+    if (!selectedTrip) errors.trip = 'Please select a route run.';
+    if (selectedSeats.length === 0) errors.seats = 'Please select at least one seat.';
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    const payload = { pickup, destination, weight, cargoDetails, deliveryType, scheduledTime };
+    if (!validateFields()) {
+      setError('Please fix the highlighted field errors before confirming.');
+      return;
+    }
+
+    if (!selectedTrip) return;
+
+    const payload = { 
+      pickup: selectedTrip.pickup, 
+      destination: selectedTrip.destination, 
+      weight: selectedSeats.length, 
+      cargoDetails: selectedTrip.cargoType, 
+      deliveryType, 
+      scheduledTime,
+      seatNumber: selectedSeats.join(','),
+      tripId: selectedTrip.id
+    };
 
     try {
       const res = await fetch('/api/bookings', {
@@ -70,47 +115,35 @@ export default function CustomerPortalPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      setModalOpen(false);
-      // Reset form
-      setPickup('');
-      setDestination('');
-      setWeight('');
-      setCargoDetails('');
-      setScheduledTime('');
-      fetchCustomerBookings();
-    } catch (err: any) {
-      setError(err.message);
-    }
+      setBookingSuccess(true);
+      setTimeout(() => {
+        setBookingSuccess(false);
+        setSelectedTrip(null);
+        setSelectedSeats([]);
+        setScheduledTime('');
+        fetchCustomerBookings();
+        setActiveTab('tickets');
+      }, 2000);
+    } catch (err: any) { setError(err.message); }
   };
 
   const handleTrackPackage = async (e: React.FormEvent) => {
     e.preventDefault();
-    setTrackError('');
-    setTrackedTrip(null);
-
+    setTrackError(''); setTrackedTrip(null);
     if (!searchTracking) return;
 
     try {
       const res = await fetch('/api/trips');
       if (res.ok) {
         const data = await res.json();
-        const found = data.trips.find((t: any) => 
-          t.trackingNumber.toLowerCase() === searchTracking.trim().toLowerCase()
-        );
-
-        if (found) {
-          setTrackedTrip(found);
-        } else {
-          setTrackError('Shipment tracking number not found in system registers.');
-        }
+        const found = data.trips.find((t: any) => t.trackingNumber.toLowerCase() === searchTracking.trim().toLowerCase());
+        if (found) setTrackedTrip(found);
+        else setTrackError('Tracking number not found.');
       }
-    } catch (err) {
-      setTrackError('Failed to query tracking records.');
-    }
+    } catch (err) { setTrackError('Failed to query tracking records.'); }
   };
 
   const handlePayInvoice = async (bookingId: string) => {
@@ -121,169 +154,388 @@ export default function CustomerPortalPage() {
         body: JSON.stringify({ paymentStatus: 'PAID' })
       });
       if (res.ok) fetchCustomerBookings();
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
-  return (
-    <div className="dashboard-content animate-fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 700 }}>Customer Cargo Portal</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Book new cargo consignments and verify live shipment positions</p>
-        </div>
-        <button onClick={() => setModalOpen(true)} className="btn btn-primary">
-          <Plus size={16} /> Book Cargo
-        </button>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
-        {/* Tracking Widget */}
-        <div className="glass-panel" style={{ padding: '24px' }}>
-          <h3 style={{ fontSize: '18px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            🔍 Track Consignment
-          </h3>
-          <form onSubmit={handleTrackPackage} style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-            <input 
-              type="text" 
-              placeholder="Enter Tracking ID (e.g. TRIP-2026-1025)" 
-              className="form-input" 
-              value={searchTracking}
-              onChange={(e) => setSearchTracking(e.target.value)}
-              style={{ flex: 1 }}
-            />
-            <button type="submit" className="btn btn-primary">Track</button>
-          </form>
-
-          {trackError && <div style={{ fontSize: '12px', color: '#f87171', marginBottom: '16px' }}>⚠️ {trackError}</div>}
-
-          {trackedTrip ? (
-            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-light)', borderRadius: '10px', padding: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <strong style={{ color: 'var(--secondary)' }}>{trackedTrip.trackingNumber}</strong>
-                <span className="badge badge-info">{trackedTrip.status}</span>
-              </div>
-              <p style={{ fontSize: '13px', lineHeight: 1.5, marginBottom: '10px' }}>
-                📍 Routing from <strong>{trackedTrip.pickup.split(',')[0]}</strong> to <strong>{trackedTrip.destination.split(',')[0]}</strong>
-              </p>
-              <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Predictive Arrival ETA: <strong>{trackedTrip.eta}</strong></p>
-
-              {/* Progress Bar */}
-              <div style={{ marginTop: '16px', background: 'rgba(255,255,255,0.1)', height: '8px', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
-                <div style={{ 
-                  background: 'var(--primary)', 
-                  height: '100%', 
-                  width: trackedTrip.status === 'COMPLETED' ? '100%' : 
-                         trackedTrip.status === 'IN_PROGRESS' ? '50%' : '15%',
-                  transition: 'width 0.5s ease' 
-                }}></div>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)', marginTop: '6px' }}>
-                <span>Scheduled</span>
-                <span>In Transit</span>
-                <span>Delivered</span>
-              </div>
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '30px 0', fontSize: '12px' }}>
-              Enter a trip tracking reference above to pull real-time location.
-            </div>
-          )}
+  const renderHome = () => (
+    <div className="home-view fade-in-up">
+      <div className="top-header">
+        <div className="header-top">
+          <div>
+            <h1 className="greeting">Hello, {user?.name?.split(' ')[0] || 'Passenger'}</h1>
+            <p className="subtitle">Ready for your next journey?</p>
+          </div>
+          <div className="header-icons">
+            <button className="icon-btn glass-btn"><Bell size={18} /></button>
+          </div>
         </div>
 
-        {/* History / Invoices Widget */}
-        <div className="glass-panel" style={{ padding: '24px' }}>
-          <h3 style={{ fontSize: '18px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FolderClock size={20} color="var(--secondary)" /> Previous Booking Manifests
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '360px', overflowY: 'auto' }}>
-            {bookings.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '30px' }}>No bookings scheduled yet.</p>
-            ) : (
-              bookings.map((booking) => (
-                <div key={booking.id} style={{ padding: '14px', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-light)', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{booking.pickup.split(',')[0]} ➜ {booking.destination.split(',')[0]}</h4>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{booking.cargoDetails} ({booking.weight} kg)</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-                    <span className={`badge ${booking.status === 'APPROVED' ? 'badge-success' : 'badge-warning'}`}>{booking.status}</span>
-                    {booking.paymentStatus === 'PENDING' ? (
-                      <button 
-                        onClick={() => handlePayInvoice(booking.id)}
-                        className="btn btn-primary" 
-                        style={{ padding: '4px 8px', fontSize: '10px', background: 'var(--accent-success)' }}
-                      >
-                        💵 Pay Invoice
-                      </button>
-                    ) : (
-                      <span className="badge badge-success">PAID</span>
-                    )}
+        <div className="main-card float-anim">
+          <div className="card-top">
+            <div className="logo-box" style={{ background: 'transparent', padding: 0, display: 'flex', alignItems: 'center' }}>
+               <img src="/ascendia_logo.png" alt="Ascendia" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'contain', boxShadow: '0 2px 10px rgba(0,0,0,0.5)' }} />
+               <span className="logo-text" style={{ marginLeft: '10px', color: '#fff' }}>ASCENDIA<br/>TRANSPORTS</span>
+            </div>
+            <div className="status-badge"><span className="dot"></span> E-Wallet Active</div>
+          </div>
+          <div className="card-body" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <div className="card-info">
+              <h3>Passenger ID</h3>
+              <p className="id-text">ID {user?.id?.toUpperCase().substring(0,12) || 'PASS-9X2V4A'}</p>
+              
+              <div className="balances-grid mt-4">
+                <div className="balance-box">
+                  <span className="balance-label">WALLET BALANCE</span>
+                  <div className="balance-amount" style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                     LKR 4,500.00 <Eye size={16} className="eye-icon" />
                   </div>
                 </div>
-              ))
-            )}
+              </div>
+            </div>
+            <div className="qr-container">
+               <QRCodeSVG value={`PASS:${user?.id}`} size={70} bgColor="#fff" fgColor="#000" />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Book Cargo Modal */}
-      {modalOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '20px' }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '520px', padding: '30px', background: 'var(--bg-surface)' }}>
-            <h2 style={{ fontSize: '20px', marginBottom: '20px' }}>Book Cargo Consignment</h2>
+      <div className="body-content">
+        <div className="quick-actions">
+          <div className="action-card glass-panel interactive" onClick={() => setActiveTab('book')}>
+            <div className="icon-wrapper glass-icon"><Ticket size={24} color="#a78bfa" /></div>
+            <h4>Book Ticket</h4>
+          </div>
+          <div className="action-card glass-panel interactive" onClick={() => setActiveTab('track')}>
+            <div className="icon-wrapper glass-icon"><MapPin size={24} color="#34d399" /></div>
+            <h4>Track Bus</h4>
+          </div>
+          <div className="action-card glass-panel interactive" onClick={() => setActiveTab('tickets')}>
+            <div className="icon-wrapper glass-icon"><FolderClock size={24} color="#60a5fa" /></div>
+            <h4>My Tickets</h4>
+          </div>
+        </div>
+
+        <div className="section-title">UPCOMING TRIPS</div>
+        {bookings.filter(b => b.status === 'APPROVED' || b.status === 'PENDING').length === 0 ? (
+          <div className="empty-state-card glass-panel">
+            <Compass size={32} color="rgba(255,255,255,0.4)" strokeWidth={1.5} />
+            <h4>No Upcoming Trips</h4>
+            <p className="empty-text">Book a ticket to get started</p>
+            <button className="btn-primary-mobile mt-4 interactive" onClick={() => setActiveTab('book')}>Book Now</button>
+          </div>
+        ) : (
+          <div className="manifest-list">
+             {bookings.filter(b => b.status === 'APPROVED' || b.status === 'PENDING').slice(0,3).map((booking, i) => (
+                <div key={i} className="manifest-item glass-panel interactive" onClick={() => setActiveTab('tickets')}>
+                  <div className="item-left">
+                    <div className="icon-badge"><Ticket size={16} color="#60a5fa" /></div>
+                    <div>
+                      <h4 style={{fontSize: '13px'}}>{booking.pickup.split(',')[0]} ➜ {booking.destination.split(',')[0]}</h4>
+                      <p>{booking.scheduledTime}</p>
+                    </div>
+                  </div>
+                  <div className="item-right">
+                    <span className="seats">{booking.seatNumber || 'Unassigned'}</span>
+                    <span className="time">{booking.status}</span>
+                  </div>
+                </div>
+             ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderBook = () => (
+    <div className="book-view fade-in-up">
+      <div className="view-header">
+        <h2>Book Ticket</h2>
+        <p>Select a route and reserve your seat</p>
+      </div>
+
+      <div className="issue-form-card glass-panel">
+        {bookingSuccess ? (
+          <div className="status-box success">
+            <div className="glow-circle green-glow"><CheckCircle2 size={64} color="#10b981" /></div>
+            <h2 className="text-success mb-2">Booking Confirmed!</h2>
+            <p className="mb-6">Your e-ticket is ready in the My Tickets tab.</p>
+          </div>
+        ) : (
+          <form onSubmit={handleBookingSubmit}>
+            {error && <div className="error-box mb-4">⚠️ {error}</div>}
             
-            {error && (
-              <div style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)', padding: '10px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px' }}>
-                ⚠️ {error}
+            <div className="form-group">
+              <label>Available Routes</label>
+              <select className="glass-input" value={selectedTrip?.id || ''} onChange={(e) => {
+                const t = availableTrips.find(t => t.id === e.target.value);
+                setSelectedTrip(t || null); setSelectedSeats([]);
+              }}>
+                <option value="">-- Select a route --</option>
+                {availableTrips.filter(t => t.status === 'ASSIGNED' || t.status === 'IN_PROGRESS').map(trip => (
+                  <option key={trip.id} value={trip.id}>
+                    {trip.trackingNumber} : {trip.pickup.split(',')[0]} ➜ {trip.destination.split(',')[0]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selectedTrip && (
+              <div className="seat-selection-box glass-panel-inner mt-4 mb-4">
+                <label className="mb-2 block text-sm" style={{color:'rgba(255,255,255,0.7)'}}>Select your seats</label>
+                {(() => {
+                  const vehicle = vehicles.find(v => v.id === selectedTrip.vehicleId);
+                  if (!vehicle) return <p className="text-sm">Loading bus layout...</p>;
+                  const dummyBookedSeats = ['A1', 'A2'];
+                  return (
+                    <SeatMap 
+                      capacity={vehicle.capacity} layout={vehicle.seatLayout || '2x2'}
+                      bookedSeats={dummyBookedSeats} selectedSeats={selectedSeats}
+                      onSeatSelect={(seatId) => setSelectedSeats(prev => prev.includes(seatId) ? prev.filter(s => s !== seatId) : [...prev, seatId])}
+                      maxSelectable={4}
+                    />
+                  );
+                })()}
               </div>
             )}
 
-            <form onSubmit={handleBookingSubmit}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="form-group">
-                  <label className="form-label">Pickup Facility Address</label>
-                  <input type="text" className="form-input" required value={pickup} onChange={(e) => setPickup(e.target.value)} placeholder="e.g. Orugodawatta Yard, Colombo" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Destination Facility Address</label>
-                  <input type="text" className="form-input" required value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="e.g. Goods Yard, Kandy" />
-                </div>
-              </div>
+            <div className="form-group mt-4">
+              <label>Passenger Class</label>
+              <select className="glass-input" value={deliveryType} onChange={(e) => setDeliveryType(e.target.value)}>
+                <option value="Standard">Standard Class</option>
+                <option value="Express">Express VIP</option>
+              </select>
+            </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="form-group">
-                  <label className="form-label">Cargo Weight (kg)</label>
-                  <input type="number" className="form-input" required value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="e.g. 4500" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Delivery Class Priority</label>
-                  <select className="form-input" value={deliveryType} onChange={(e) => setDeliveryType(e.target.value)}>
-                    <option value="Standard">Standard Class Delivery</option>
-                    <option value="Express">Express Air/Road Cargo</option>
-                  </select>
-                </div>
-              </div>
+            <div className="form-group mt-4">
+              <label>Travel Date</label>
+              <input type="date" className="glass-input" value={scheduledTime} onChange={(e) => { setScheduledTime(e.target.value); setFieldErrors(p => ({ ...p, scheduledTime: undefined })); }}
+                onBlur={() => { const r = isFutureDate(scheduledTime, 'Travel Date'); if (!r.valid) setFieldErrors(p => ({ ...p, scheduledTime: r.message })); }}
+                style={fieldErrors.scheduledTime ? { borderColor: '#fc8181' } : {}} />
+              {fieldErrors.scheduledTime && <span style={{ color: '#fc8181', fontSize: '11px', marginTop: '4px', display: 'block' }}>⚠ {fieldErrors.scheduledTime}</span>}
+            </div>
 
-              <div className="form-group">
-                <label className="form-label">Cargo Details Manifest</label>
-                <input type="text" className="form-input" required value={cargoDetails} onChange={(e) => setCargoDetails(e.target.value)} placeholder="e.g. Industrial pipes, spare electronics" />
-              </div>
+            <button type="submit" className="btn-primary-mobile mt-6 interactive">
+              Confirm {selectedSeats.length > 0 ? `${selectedSeats.length} Seats` : 'Booking'}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
 
-              <div className="form-group">
-                <label className="form-label">Preferred Dispatch Date</label>
-                <input type="date" className="form-input" required value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} />
-              </div>
+  const renderTrack = () => (
+    <div className="track-view fade-in-up">
+      <div className="view-header">
+        <h2>Track Bus</h2>
+        <p>Enter tracking ID to view live location</p>
+      </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
-                <button type="button" onClick={() => setModalOpen(false)} className="btn btn-secondary">Cancel</button>
-                <button type="submit" className="btn btn-primary">Submit Booking</button>
-              </div>
-            </form>
+      <div className="scanner-container glass-panel" style={{textAlign: 'left'}}>
+        <form onSubmit={handleTrackPackage}>
+          <div className="form-group">
+            <input type="text" className="glass-input mb-4" placeholder="e.g. TRIP-2026-1025" value={searchTracking} onChange={(e) => setSearchTracking(e.target.value)} />
+            <button type="submit" className="btn-primary-mobile interactive"><Search size={18} /> Track Journey</button>
           </div>
-        </div>
-      )}
+        </form>
+
+        {trackError && <div className="error-box mt-4">⚠️ {trackError}</div>}
+
+        {trackedTrip && (
+          <div className="glass-panel-inner mt-6">
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <strong className="text-blue">{trackedTrip.trackingNumber}</strong>
+              <span className="status-badge" style={{padding: '4px 8px'}}>{trackedTrip.status}</span>
+            </div>
+            <p className="text-sm mb-2">📍 {trackedTrip.pickup.split(',')[0]} ➜ {trackedTrip.destination.split(',')[0]}</p>
+            <p className="text-sm text-green">ETA: <strong>{trackedTrip.eta}</strong></p>
+
+            {trackedTrip.waypoints && (() => {
+              try {
+                const wp = JSON.parse(trackedTrip.waypoints) as { stop: string; eta: string }[];
+                return (
+                  <div className="mt-4 pt-4" style={{borderTop: '1px dashed rgba(255,255,255,0.2)'}}>
+                    <h4 style={{ fontSize: '12px', marginBottom: '12px', color: 'rgba(255,255,255,0.6)' }}>LIVE ROUTE TIMETABLE</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative' }}>
+                      <div style={{ position: 'absolute', left: '7px', top: '10px', bottom: '10px', width: '2px', background: 'rgba(255,255,255,0.1)' }} />
+                      {wp.map((point, index) => {
+                        const progress = trackedTrip.status === 'COMPLETED' ? 1 : trackedTrip.status === 'IN_PROGRESS' ? 0.5 : 0;
+                        const isPassed = (index / (wp.length - 1)) <= progress;
+                        return (
+                          <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '16px', position: 'relative', zIndex: 1 }}>
+                            <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: isPassed ? '#10b981' : '#0f172a', border: `2px solid ${isPassed ? '#10b981' : 'rgba(255,255,255,0.3)'}`, flexShrink: 0 }} />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '13px' }}>
+                              <span style={{ color: isPassed ? '#fff' : 'rgba(255,255,255,0.5)', fontWeight: isPassed ? 600 : 400 }}>{point.stop}</span>
+                              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px' }}>+{point.eta}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              } catch(e) { return null; }
+            })()}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderTickets = () => (
+    <div className="history-view fade-in-up">
+      <div className="view-header">
+        <h2>My Tickets</h2>
+        <p>Your booking manifest & invoices</p>
+      </div>
+      
+      <div className="manifest-list">
+        {bookings.length === 0 ? (
+          <div className="empty-state-card glass-panel">No tickets booked yet.</div>
+        ) : (
+          bookings.map((booking) => (
+            <div key={booking.id} className="manifest-item glass-panel">
+              <div className="item-left" style={{width: '60%'}}>
+                <div className="icon-badge"><Ticket size={16} color="#10b981" /></div>
+                <div>
+                  <h4 style={{fontSize:'13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                    {booking.pickup.split(',')[0]} ➜ {booking.destination.split(',')[0]}
+                  </h4>
+                  <p>{booking.scheduledTime} | {booking.deliveryType}</p>
+                </div>
+              </div>
+              <div className="item-right" style={{width: '40%'}}>
+                <span className="seats" style={{fontSize: '13px'}}>{booking.seatNumber || 'Pending'}</span>
+                {booking.paymentStatus === 'PENDING' ? (
+                  <button onClick={() => handlePayInvoice(booking.id)} className="btn-success-mobile" style={{padding: '6px 10px', fontSize: '10px', borderRadius: '6px', marginTop: '4px'}}>Pay Now</button>
+                ) : (
+                  <span className="badge badge-success" style={{fontSize: '10px', padding: '4px 8px', borderRadius: '6px', background: 'rgba(16,185,129,0.2)', color: '#10b981', border: '1px solid rgba(16,185,129,0.5)'}}>PAID</span>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="mobile-app-wrapper theme-dark-glass">
+      <style dangerouslySetInnerHTML={{__html: globalStyles}} />
+      
+      {activeTab === 'home' && renderHome()}
+      {activeTab === 'book' && renderBook()}
+      {activeTab === 'track' && renderTrack()}
+      {activeTab === 'tickets' && renderTickets()}
+
+      <div className="bottom-nav-pill">
+        <button className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}><Home size={22} /><span>Home</span></button>
+        <button className={`nav-item ${activeTab === 'book' ? 'active' : ''}`} onClick={() => setActiveTab('book')}><Ticket size={22} /><span>Book</span></button>
+        <button className={`nav-item ${activeTab === 'track' ? 'active' : ''}`} onClick={() => setActiveTab('track')}><MapPin size={22} /><span>Track</span></button>
+        <button className={`nav-item ${activeTab === 'tickets' ? 'active' : ''}`} onClick={() => setActiveTab('tickets')}><FolderClock size={22} /><span>Tickets</span></button>
+      </div>
     </div>
   );
 }
+
+const globalStyles = `
+  .mobile-app-wrapper { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; display: flex; flex-direction: column; overflow: hidden; font-family: 'Inter', sans-serif; color: #f8fafc; background: linear-gradient(135deg, rgba(2, 6, 23, 0.95) 0%, rgba(15, 23, 42, 0.9) 50%, rgba(88, 28, 135, 0.8) 100%), url('/tms_login_bg.png') center center / cover no-repeat; }
+  .fade-in-up { animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+  .glass-panel { background: rgba(255, 255, 255, 0.04); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); }
+  .glass-panel-inner { background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 16px; }
+  .glass-btn { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #fff; backdrop-filter: blur(8px); }
+  .glass-input { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: white; padding: 14px; border-radius: 10px; width: 100%; outline: none; }
+  .glass-input option { background: #0f172a; color: white; }
+
+  .interactive { transition: transform 0.2s, box-shadow 0.2s, background 0.2s; cursor: pointer; }
+  .interactive:active { transform: scale(0.96); }
+
+  .text-gradient { background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .text-green { color: #10b981 !important; }
+  .text-blue { color: #60a5fa !important; }
+  .mt-2 { margin-top: 8px; }
+  .mt-4 { margin-top: 16px; }
+  .mt-6 { margin-top: 24px; }
+  .mb-2 { margin-bottom: 8px; }
+  .mb-4 { margin-bottom: 16px; }
+  .mb-6 { margin-bottom: 24px; }
+  .pt-4 { padding-top: 16px; }
+  .block { display: block; }
+  .text-sm { font-size: 13px; }
+
+  /* Top Header Area */
+  .top-header { padding: 32px 20px 20px; }
+  .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+  .greeting { font-size: 22px; font-weight: 800; margin: 0 0 4px 0; letter-spacing: -0.02em; }
+  .subtitle { font-size: 14px; color: rgba(255,255,255,0.6); margin: 0; font-family: monospace; font-weight: bold; }
+  .header-icons { display: flex; gap: 12px; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+  /* E-Wallet Passenger Card */
+  .main-card { background: #0f172a; color: white; border-radius: 20px; padding: 24px; box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
+  .float-anim { animation: floatBob 6s ease-in-out infinite; }
+  @keyframes floatBob { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+  .logo-box { background: white; padding: 4px 8px; border-radius: 8px; }
+  .logo-text { color: #b91c1c; font-weight: 900; font-style: italic; font-size: 10px; line-height: 1; letter-spacing: 1px; }
+  .status-badge { background: #10b981; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .dot { width: 6px; height: 6px; background: white; border-radius: 50%; }
+  .card-info h3 { font-size: 16px; font-weight: 600; color: white; margin: 0 0 4px; }
+  .id-text { font-size: 13px; color: #94a3b8; margin: 0; font-family: monospace; }
+  .balances-grid { margin-top: 16px; }
+  .balance-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-bottom: 4px; }
+  .balance-amount { font-size: 22px; font-weight: 800; }
+  .eye-icon { color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); padding: 4px; border-radius: 6px; width: 26px; height: 26px; }
+  .qr-container { background: white; padding: 8px; border-radius: 12px; }
+
+  /* Body Content */
+  .body-content { flex: 1; padding: 20px 20px 100px; overflow-y: auto; }
+  .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+  .action-card { padding: 16px 8px; text-align: center; }
+  .action-card:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
+  .icon-wrapper { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; background: rgba(255,255,255,0.05); }
+  .action-card h4 { font-size: 12px; font-weight: 600; margin: 0; color: #fff; }
+  .section-title { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; }
+  .empty-state-card { padding: 40px 20px; text-align: center; }
+  .empty-state-card svg { margin: 0 auto 16px; }
+  .empty-state-card h4 { font-size: 16px; font-weight: 600; color: #fff; margin: 0 0 6px; }
+  .empty-text { font-size: 14px; color: rgba(255,255,255,0.5); font-weight: 500; margin: 0; }
+  .error-box { background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); padding: 12px; border-radius: 8px; font-size: 13px; }
+
+  /* Views */
+  .home-view { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .book-view, .track-view, .history-view { padding: 32px 20px 120px; flex: 1; overflow-y: auto; }
+  .view-header { margin-bottom: 24px; }
+  .view-header h2 { font-size: 26px; font-weight: 800; color: #fff; margin: 0 0 6px; }
+  .view-header p { font-size: 14px; color: rgba(255,255,255,0.6); margin: 0; font-family: monospace; font-weight: bold; }
+
+  .scanner-container { padding: 16px; }
+  .btn-primary-mobile { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4); }
+  .btn-success-mobile { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4); }
+
+  .status-box { text-align: center; padding: 30px 10px; }
+  .glow-circle { width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; }
+  .green-glow { background: rgba(16,185,129,0.1); box-shadow: 0 0 30px rgba(16,185,129,0.2); }
+  .text-success { color: #34d399; font-size: 28px; font-weight: 800; }
+
+  /* Issue Form */
+  .issue-form-card { padding: 24px; }
+
+  /* Manifest & Seat Map */
+  .manifest-list { display: flex; flex-direction: column; gap: 12px; }
+  .manifest-item { padding: 16px; display: flex; justify-content: space-between; align-items: center; }
+  .item-left { display: flex; align-items: center; gap: 14px; }
+  .icon-badge { background: rgba(16,185,129,0.1); padding: 8px; border-radius: 50%; }
+  .item-left h4 { margin: 0 0 4px 0; font-size: 15px; font-weight: 700; color: #fff; }
+  .item-left p { margin: 0; font-size: 12px; color: rgba(255,255,255,0.5); }
+  .item-right { text-align: right; }
+  .seats { display: block; font-size: 15px; font-weight: 800; color: #a78bfa; margin-bottom: 4px; }
+  .time { display: block; font-size: 11px; color: rgba(255,255,255,0.4); }
+  
+  /* Bottom Nav */
+  .bottom-nav-pill { position: fixed; bottom: 24px; left: 24px; right: 24px; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 40px; display: flex; justify-content: space-around; align-items: center; padding: 8px; z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+  .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: transparent; border: none; cursor: pointer; color: rgba(255,255,255,0.4); font-size: 10px; font-weight: 600; padding: 10px 16px; border-radius: 30px; transition: 0.3s; }
+  .nav-item.active { color: #fff; background: rgba(255,255,255,0.1); box-shadow: inset 0 1px 0 rgba(255,255,255,0.1); }
+  .nav-item.active svg { transform: scale(1.1); color: #60a5fa; }
+`;

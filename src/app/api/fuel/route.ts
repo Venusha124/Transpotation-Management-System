@@ -19,16 +19,60 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fuel fields' }, { status: 400 });
     }
 
+    const newMileage = Number(mileage);
     const log = await db.fuelLog.create({
       data: {
         vehicleId,
         driverId,
         liters: Number(liters),
         cost: Number(cost),
-        mileage: Number(mileage),
+        mileage: newMileage,
         date: date ? new Date(date).toISOString() : new Date().toISOString()
       }
     });
+
+    // Automated Preventive Maintenance Tracking
+    const vehicle = await db.vehicle.findUnique({ where: { id: vehicleId } });
+    if (vehicle) {
+      const oldMileage = vehicle.totalMileage || 0;
+      if (newMileage > oldMileage) {
+        await db.vehicle.update({
+          where: { id: vehicleId },
+          data: { totalMileage: newMileage }
+        });
+
+        // Trigger maintenance every 10,000 km
+        if (Math.floor(oldMileage / 10000) < Math.floor(newMileage / 10000)) {
+          const nextInterval = Math.floor(newMileage / 10000) * 10000;
+          
+          await db.maintenance.create({
+            data: {
+              vehicleId,
+              type: "Automated Routine Service",
+              description: `System generated ${nextInterval}km scheduled maintenance for ${vehicle.number}`,
+              cost: 0,
+              status: "SCHEDULED",
+              scheduledDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Schedule 7 days out
+              completedDate: null,
+              partsUsed: ""
+            }
+          });
+
+          // Notify Transport Managers
+          const managers = await db.user.findMany({ where: { role: 'TRANSPORT_MANAGER' } });
+          if (managers.length > 0) {
+            await db.notification.create({
+              data: {
+                userId: managers[0].id,
+                title: "Maintenance Alert",
+                message: `Bus ${vehicle.number} has crossed ${nextInterval}km. Automated routine service scheduled.`,
+                type: "Alert"
+              }
+            });
+          }
+        }
+      }
+    }
 
     await db.auditLog.create({
       data: {

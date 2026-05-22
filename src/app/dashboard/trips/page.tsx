@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { CalendarRange, Plus, Play, CheckCircle2, AlertOctagon, Trash2 } from 'lucide-react';
+import { Route, Plus, Play, CheckCircle2, AlertOctagon, Trash2, Bus, Clock } from 'lucide-react';
 
 interface Trip {
   id: string;
@@ -49,8 +49,8 @@ export default function TripsPage() {
   const [pickup, setPickup] = useState('');
   const [destination, setDestination] = useState('');
   const [weight, setWeight] = useState('');
-  const [cargoType, setCargoType] = useState('General Goods');
-  const [eta, setEta] = useState('24 hours');
+  const [cargoType, setCargoType] = useState('Local Service');
+  const [eta, setEta] = useState('2 hours');
   const [routePath, setRoutePath] = useState('COLOMBO_JAFFNA'); // Mock route selector
 
   const fetchTripsData = async () => {
@@ -86,17 +86,27 @@ export default function TripsPage() {
   const availableVehicles = vehicles.filter(v => v.availability && v.status === 'Available');
   const availableDrivers = drivers.filter(d => d.availability);
 
-  const handleUpdateStatus = async (tripId: string, status: string) => {
+  const handleUpdateStatus = async (id: string, status: string, additionalData: any = {}) => {
     try {
-      const res = await fetch(`/api/trips/${tripId}`, {
+      const res = await fetch(`/api/trips/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, ...additionalData }),
       });
       if (res.ok) fetchTripsData();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
     }
+  };
+
+  const handleReportDelay = (id: string, currentEta: string) => {
+    const delayReason = prompt("Enter reason for delay (e.g. Heavy Traffic, Weather):");
+    if (!delayReason) return;
+    
+    const newEta = prompt(`Enter new estimated ETA (Current: ${currentEta}):`, `${currentEta} + 30 mins`);
+    if (!newEta) return;
+
+    handleUpdateStatus(id, 'IN_PROGRESS', { delayReason, eta: newEta });
   };
 
   const handleDeleteTrip = async (tripId: string) => {
@@ -113,25 +123,35 @@ export default function TripsPage() {
     e.preventDefault();
     setError('');
 
-    if (!driverId || !vehicleId) {
-      setError('Please select an available vehicle and driver');
-      return;
-    }
+    // -- Required selections --
+    if (!vehicleId) { setError('Please select an available bus for this route run.'); return; }
+    if (!driverId) { setError('Please select an available driver for this route run.'); return; }
 
-    const weightNum = parseFloat(weight);
-    if (isNaN(weightNum) || weightNum <= 0) {
-      setError('Cargo weight must be a positive number greater than zero.');
-      return;
+    // -- Departure / Arrival stops --
+    if (!pickup.trim()) { setError('Departure stop / terminal is required.'); return; }
+    if (!destination.trim()) { setError('Arrival stop / terminal is required.'); return; }
+    if (pickup.trim().toLowerCase() === destination.trim().toLowerCase()) {
+      setError('Departure and Arrival stops cannot be the same location.'); return;
     }
+    if (pickup.trim().length < 3) { setError('Departure stop name must be at least 3 characters.'); return; }
+    if (destination.trim().length < 3) { setError('Arrival stop name must be at least 3 characters.'); return; }
+
+    // -- Passenger count --
+    const paxNum = parseInt(weight, 10);
+    if (isNaN(paxNum) || paxNum <= 0) { setError('Passenger count must be a positive whole number.'); return; }
 
     const selectedVehicle = vehicles.find(v => v.id === vehicleId);
-    if (selectedVehicle && weightNum > selectedVehicle.capacity) {
-      setError(`Cargo weight (${weightNum} kg) exceeds vehicle capacity (${selectedVehicle.capacity} kg) for vehicle ${selectedVehicle.number}.`);
+    if (selectedVehicle && paxNum > selectedVehicle.capacity) {
+      setError(`Passenger count (${paxNum}) exceeds bus seat capacity (${selectedVehicle.capacity} seats) for bus ${selectedVehicle.number}.`);
       return;
     }
 
-    // Set mock coordinates based on route selection
+    // -- ETA --
+    if (!eta.trim() || eta.trim().length < 3) { setError('Please enter a valid estimated journey duration (e.g. "2 hours 30 mins").'); return; }
+
+    // Set mock coordinates and timetables based on route selection
     let routePoints = '[]';
+    let waypoints = '[]';
     if (routePath === 'COLOMBO_KANDY') {
       routePoints = JSON.stringify([
         [6.9271, 79.8612], // Colombo
@@ -142,6 +162,13 @@ export default function TripsPage() {
         [7.2525, 80.4439], // Mawanella
         [7.2906, 80.6337]  // Kandy
       ]);
+      waypoints = JSON.stringify([
+        { stop: 'Colombo Fort', eta: '0:00' },
+        { stop: 'Kadawatha', eta: '0:45' },
+        { stop: 'Warakapola', eta: '1:30' },
+        { stop: 'Kegalle', eta: '2:15' },
+        { stop: 'Kandy', eta: '3:00' }
+      ]);
     } else if (routePath === 'COLOMBO_GALLE') {
       routePoints = JSON.stringify([
         [6.9271, 79.8612], // Colombo
@@ -150,6 +177,13 @@ export default function TripsPage() {
         [6.2443, 80.0543], // Ambalangoda
         [6.1362, 80.1042], // Hikkaduwa
         [6.0535, 80.2117]  // Galle
+      ]);
+      waypoints = JSON.stringify([
+        { stop: 'Colombo Fort', eta: '0:00' },
+        { stop: 'Kalutara', eta: '1:00' },
+        { stop: 'Bentota', eta: '1:30' },
+        { stop: 'Hikkaduwa', eta: '2:15' },
+        { stop: 'Galle', eta: '2:45' }
       ]);
     } else {
       // COLOMBO_JAFFNA
@@ -162,9 +196,17 @@ export default function TripsPage() {
         [9.3803, 80.3992], // Kilinochchi
         [9.6615, 80.0255]  // Jaffna
       ]);
+      waypoints = JSON.stringify([
+        { stop: 'Colombo Fort', eta: '0:00' },
+        { stop: 'Kurunegala', eta: '2:30' },
+        { stop: 'Dambulla', eta: '4:00' },
+        { stop: 'Anuradhapura', eta: '5:30' },
+        { stop: 'Vavuniya', eta: '6:45' },
+        { stop: 'Jaffna', eta: '8:30' }
+      ]);
     }
 
-    const payload = { driverId, vehicleId, pickup, destination, weight, cargoType, routePoints, eta };
+    const payload = { driverId, vehicleId, pickup: pickup.trim(), destination: destination.trim(), weight: paxNum, cargoType, routePoints, waypoints, eta: eta.trim() };
 
     try {
       const res = await fetch('/api/trips', {
@@ -177,12 +219,7 @@ export default function TripsPage() {
       if (!res.ok) throw new Error(data.error);
 
       setModalOpen(false);
-      // Reset fields
-      setDriverId('');
-      setVehicleId('');
-      setPickup('');
-      setDestination('');
-      setWeight('');
+      setDriverId(''); setVehicleId(''); setPickup(''); setDestination(''); setWeight('');
       fetchTripsData();
     } catch (err: any) {
       setError(err.message);
@@ -193,11 +230,14 @@ export default function TripsPage() {
     <div className="dashboard-content animate-fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 700 }}>Trip Scheduling</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Dispatch shipments, select routes, and track delivery lifecycles</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Route size={26} color="var(--primary)" />
+            <h1 style={{ fontSize: '24px', fontWeight: 700 }}>Route Run Scheduling</h1>
+          </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px', marginLeft: '36px' }}>Dispatch buses, assign routes and track service run lifecycles</p>
         </div>
         <button onClick={() => setModalOpen(true)} className="btn btn-primary">
-          <Plus size={16} /> Schedule Trip
+          <Plus size={16} /> Schedule Route Run
         </button>
       </div>
 
@@ -207,12 +247,12 @@ export default function TripsPage() {
           <table className="tms-table">
             <thead>
               <tr>
-                <th>Tracking Number</th>
-                <th>Driver Name</th>
-                <th>Vehicle Number</th>
-                <th>Route (Pickup ➜ Drop)</th>
-                <th>Cargo / Weight</th>
-                <th>ETA</th>
+                <th>Run Number</th>
+                <th>Bus Driver</th>
+                <th>Bus Number</th>
+                <th>Route (Departure → Arrival)</th>
+                <th>Service / Passengers</th>
+                <th>Est. Duration</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -230,14 +270,21 @@ export default function TripsPage() {
                   const assignedVehicle = vehicles.find(v => v.id === trip.vehicleId);
                   return (
                     <tr key={trip.id}>
-                      <td style={{ fontWeight: 600, color: 'var(--primary-hover)' }}>{trip.trackingNumber}</td>
-                      <td>{assignedDriver ? assignedDriver.name : 'Unknown Driver'}</td>
-                      <td>{assignedVehicle ? assignedVehicle.number : 'Unknown Vehicle'}</td>
-                      <td style={{ fontSize: '13px' }}>
-                        <strong>{trip.pickup}</strong> to <strong>{trip.destination}</strong>
+                      <td style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          🚌 {trip.trackingNumber}
+                        </div>
                       </td>
-                      <td>{trip.cargoType} ({trip.weight.toLocaleString()} kg)</td>
-                      <td>{trip.eta}</td>
+                      <td>{assignedDriver ? assignedDriver.name : 'Unassigned'}</td>
+                      <td style={{ fontWeight: 600 }}>{assignedVehicle ? assignedVehicle.number : 'Unassigned'}</td>
+                      <td style={{ fontSize: '13px' }}>
+                        <strong>{trip.pickup}</strong> <span style={{ color: 'var(--primary)' }}>→</span> <strong>{trip.destination}</strong>
+                      </td>
+                      <td>
+                        <span className="badge badge-info">{trip.cargoType}</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>{trip.weight} passengers</span>
+                      </td>
+                      <td style={{ fontSize: '13px' }}>{trip.eta}</td>
                       <td>
                         <span className={`badge ${
                           trip.status === 'ASSIGNED' ? 'badge-warning' : 
@@ -265,6 +312,16 @@ export default function TripsPage() {
                               style={{ padding: '6px 10px', fontSize: '11px', background: 'var(--accent-success)' }}
                             >
                               <CheckCircle2 size={11} /> Complete
+                            </button>
+                          )}
+                          {trip.status === 'IN_PROGRESS' && (
+                            <button 
+                              onClick={() => handleReportDelay(trip.id, trip.eta)}
+                              className="btn btn-secondary" 
+                              style={{ padding: '6px 10px', fontSize: '11px', color: '#f59e0b' }}
+                              title="Send Smart Delay Alert to passengers"
+                            >
+                              <Clock size={11} /> Delay
                             </button>
                           )}
                           {trip.status !== 'COMPLETED' && trip.status !== 'CANCELLED' && (
@@ -309,15 +366,15 @@ export default function TripsPage() {
             <form onSubmit={handleSubmit}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
-                  <label className="form-label">Available Vehicle</label>
+                  <label className="form-label">Available Bus</label>
                   <select className="form-input" required value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
-                    <option value="">-- Select Available Vehicle --</option>
+                    <option value="">-- Select Available Bus --</option>
                     {availableVehicles.map((v) => (
-                      <option key={v.id} value={v.id}>{v.number} ({v.brand} - {v.capacity}kg)</option>
+                      <option key={v.id} value={v.id}>{v.number} ({v.brand} — {v.capacity} seats)</option>
                     ))}
                   </select>
                   {availableVehicles.length === 0 && (
-                    <span style={{ fontSize: '10px', color: 'var(--accent-danger)' }}>No vehicles available. Set one to Available.</span>
+                    <span style={{ fontSize: '10px', color: 'var(--accent-danger)' }}>No buses available. Set one to Available.</span>
                   )}
                 </div>
                 
@@ -337,37 +394,42 @@ export default function TripsPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
-                  <label className="form-label">Pickup Location</label>
-                  <input type="text" className="form-input" required value={pickup} onChange={(e) => setPickup(e.target.value)} placeholder="e.g. Orugodawatta Yard, Colombo" />
+                  <label className="form-label">Departure Stop</label>
+                  <input type="text" className="form-input" required value={pickup} onChange={(e) => setPickup(e.target.value)} placeholder="e.g. Colombo Fort Bus Stand" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Destination Location</label>
-                  <input type="text" className="form-input" required value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="e.g. Goods Yard, Kandy" />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="form-group">
-                  <label className="form-label">Cargo Weight (kg)</label>
-                  <input type="number" className="form-input" required value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="e.g. 5000" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Cargo Type</label>
-                  <input type="text" className="form-input" required value={cargoType} onChange={(e) => setCargoType(e.target.value)} placeholder="e.g. Fresh Foods" />
+                  <label className="form-label">Arrival Stop</label>
+                  <input type="text" className="form-input" required value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="e.g. Kandy Central Bus Station" />
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
-                  <label className="form-label">ETA Prediction</label>
-                  <input type="text" className="form-input" required value={eta} onChange={(e) => setEta(e.target.value)} placeholder="e.g. 8 hours" />
+                  <label className="form-label">Passenger Count</label>
+                  <input type="number" className="form-input" required value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="e.g. 45" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Optimized Route Select</label>
+                  <label className="form-label">Service Type</label>
+                  <select className="form-input" value={cargoType} onChange={(e) => setCargoType(e.target.value)}>
+                    <option value="Local Service">Local Service</option>
+                    <option value="Express Service">Express Service</option>
+                    <option value="Inter-City Express">Inter-City Express</option>
+                    <option value="Air-Conditioned">Air-Conditioned</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="form-group">
+                  <label className="form-label">Est. Journey Duration</label>
+                  <input type="text" className="form-input" required value={eta} onChange={(e) => setEta(e.target.value)} placeholder="e.g. 2 hours 30 mins" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Bus Route</label>
                   <select className="form-input" value={routePath} onChange={(e) => setRoutePath(e.target.value)}>
-                    <option value="COLOMBO_JAFFNA">Northern Route (Colombo ➜ Jaffna)</option>
-                    <option value="COLOMBO_KANDY">Central Route (Colombo ➜ Kandy)</option>
-                    <option value="COLOMBO_GALLE">Southern Expressway (Colombo ➜ Galle)</option>
+                    <option value="COLOMBO_JAFFNA">Route 600 — Northern (Colombo Fort → Jaffna)</option>
+                    <option value="COLOMBO_KANDY">Route 101 — Central (Colombo Fort → Kandy)</option>
+                    <option value="COLOMBO_GALLE">Route 304 — Southern (Colombo → Galle)</option>
                   </select>
                 </div>
               </div>
