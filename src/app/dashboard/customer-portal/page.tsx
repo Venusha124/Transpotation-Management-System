@@ -57,15 +57,47 @@ export default function PassengerAppPage() {
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string | undefined }>({});
   const [bookingSuccess, setBookingSuccess] = useState(false);
 
-  useEffect(() => {
-    fetch('/api/auth/me').then(res => res.json()).then(data => {
-      if (data.user) setUser(data.user);
-    }).catch(console.error);
+  // New Features State
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  
+  const [showTopUp, setShowTopUp] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState(1000);
+  const [isToppingUp, setIsToppingUp] = useState(false);
 
+  const [showRateModal, setShowRateModal] = useState(false);
+  const [bookingToRate, setBookingToRate] = useState<Booking | null>(null);
+  const [rating, setRating] = useState(5);
+  const [feedback, setFeedback] = useState('');
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+
+  useEffect(() => {
+    fetchUserData();
     fetch('/api/trips').then(res => res.json()).then(data => setAvailableTrips(data.trips || []));
     fetch('/api/vehicles').then(res => res.json()).then(data => setVehicles(data.vehicles || []));
     fetchCustomerBookings();
+    fetchNotifications();
   }, []);
+
+  const fetchUserData = async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) setUser(data.user);
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch('/api/notifications');
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+      }
+    } catch (err) { console.error(err); }
+  };
 
   const fetchCustomerBookings = async () => {
     try {
@@ -157,6 +189,53 @@ export default function PassengerAppPage() {
     } catch (err) { console.error(err); }
   };
 
+  const handleTopUpWallet = async () => {
+    setIsToppingUp(true);
+    try {
+      // Simulate Payment Gateway Delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const res = await fetch('/api/users/wallet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: topUpAmount })
+      });
+      if (res.ok) {
+        setShowTopUp(false);
+        fetchUserData(); // refresh balance
+        fetchNotifications(); // refresh notifications
+      }
+    } catch (err) { console.error(err); }
+    setIsToppingUp(false);
+  };
+
+  const handleMarkNotificationsRead = async () => {
+    setShowNotifications(true);
+    const unread = notifications.filter(n => !n.read).map(n => n.id);
+    if (unread.length > 0) {
+      await fetch('/api/notifications', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notificationIds: unread }) });
+      fetchNotifications();
+    }
+  };
+
+  const handleSubmitRating = async () => {
+    if (!bookingToRate) return;
+    setIsSubmittingRating(true);
+    try {
+      const res = await fetch(`/api/bookings/${bookingToRate.id}/rate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating, feedback })
+      });
+      if (res.ok) {
+        setShowRateModal(false);
+        setBookingToRate(null);
+        fetchCustomerBookings();
+      }
+    } catch (err) { console.error(err); }
+    setIsSubmittingRating(false);
+  };
+
   const renderHome = () => (
     <div className="home-view fade-in-up">
       <div className="top-header">
@@ -166,7 +245,12 @@ export default function PassengerAppPage() {
             <p className="subtitle">Ready for your next journey?</p>
           </div>
           <div className="header-icons">
-            <button className="icon-btn glass-btn"><Bell size={18} /></button>
+            <button className="icon-btn glass-btn" onClick={handleMarkNotificationsRead} style={{position: 'relative'}}>
+              <Bell size={18} />
+              {notifications.filter(n => !n.read).length > 0 && (
+                <span style={{position: 'absolute', top: '8px', right: '10px', width: '8px', height: '8px', background: '#ef4444', borderRadius: '50%'}}></span>
+              )}
+            </button>
           </div>
         </div>
 
@@ -183,13 +267,16 @@ export default function PassengerAppPage() {
               <h3>Passenger ID</h3>
               <p className="id-text">ID {user?.id?.toUpperCase().substring(0,12) || 'PASS-9X2V4A'}</p>
               
-              <div className="balances-grid mt-4">
+              <div className="balances-grid mt-4" style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
                 <div className="balance-box">
                   <span className="balance-label">WALLET BALANCE</span>
                   <div className="balance-amount" style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                     LKR 4,500.00 <Eye size={16} className="eye-icon" />
+                     LKR {user?.walletBalance?.toFixed(2) || '0.00'} <Eye size={16} className="eye-icon" />
                   </div>
                 </div>
+                <button className="btn-success-mobile interactive" style={{ padding: '6px 12px', fontSize: '12px', height: 'fit-content' }} onClick={() => setShowTopUp(true)}>
+                  <Plus size={14} /> Top Up
+                </button>
               </div>
             </div>
             <div className="qr-container">
@@ -405,7 +492,13 @@ export default function PassengerAppPage() {
               </div>
               <div className="item-right" style={{width: '40%'}}>
                 <span className="seats" style={{fontSize: '13px'}}>{booking.seatNumber || 'Pending'}</span>
-                {booking.paymentStatus === 'PENDING' ? (
+                {booking.status === 'COMPLETED' ? (
+                  booking.rating ? (
+                    <span className="badge badge-success" style={{fontSize: '10px', padding: '4px 8px', borderRadius: '6px', background: 'rgba(16,185,129,0.2)', color: '#10b981', border: '1px solid rgba(16,185,129,0.5)'}}>⭐ {booking.rating}/5</span>
+                  ) : (
+                    <button onClick={() => { setBookingToRate(booking); setShowRateModal(true); setRating(5); setFeedback(''); }} className="btn-primary-mobile" style={{padding: '6px 10px', fontSize: '10px', borderRadius: '6px', marginTop: '4px'}}>Rate Trip</button>
+                  )
+                ) : booking.paymentStatus === 'PENDING' ? (
                   <button onClick={() => handlePayInvoice(booking.id)} className="btn-success-mobile" style={{padding: '6px 10px', fontSize: '10px', borderRadius: '6px', marginTop: '4px'}}>Pay Now</button>
                 ) : (
                   <span className="badge badge-success" style={{fontSize: '10px', padding: '4px 8px', borderRadius: '6px', background: 'rgba(16,185,129,0.2)', color: '#10b981', border: '1px solid rgba(16,185,129,0.5)'}}>PAID</span>
@@ -426,6 +519,87 @@ export default function PassengerAppPage() {
       {activeTab === 'book' && renderBook()}
       {activeTab === 'track' && renderTrack()}
       {activeTab === 'tickets' && renderTickets()}
+
+      {/* Top Up Modal */}
+      {showTopUp && (
+        <div className="modal-overlay fade-in-up" style={{position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.7)', zIndex: 10001, display:'flex', alignItems:'center', justifyContent:'center'}}>
+          <div className="glass-panel" style={{width: '90%', maxWidth: '350px', padding: '24px'}}>
+            <h3 style={{marginTop:0}}>Top Up E-Wallet</h3>
+            <p className="text-sm" style={{color: 'rgba(255,255,255,0.6)', marginBottom: '16px'}}>Select amount to load via SecureGateway™</p>
+            
+            <div style={{display: 'flex', gap: '8px', marginBottom: '16px'}}>
+               {[1000, 2000, 5000].map(amt => (
+                 <button key={amt} className={`glass-btn interactive ${topUpAmount === amt ? 'active-amt' : ''}`} onClick={() => setTopUpAmount(amt)} style={{flex: 1, padding: '10px', borderRadius: '8px', borderColor: topUpAmount === amt ? '#60a5fa' : 'rgba(255,255,255,0.1)'}}>
+                   LKR {amt}
+                 </button>
+               ))}
+            </div>
+            
+            <div className="form-group mb-4">
+              <label>Custom Amount</label>
+              <input type="number" className="glass-input" value={topUpAmount} onChange={(e) => setTopUpAmount(Number(e.target.value))} />
+            </div>
+
+            <div style={{display: 'flex', gap: '12px', marginTop: '24px'}}>
+              <button className="glass-btn interactive" style={{flex: 1, padding: '12px', borderRadius: '8px'}} onClick={() => setShowTopUp(false)}>Cancel</button>
+              <button className="btn-primary-mobile interactive" style={{flex: 1}} onClick={handleTopUpWallet} disabled={isToppingUp}>
+                {isToppingUp ? <RefreshCw className="spin-anim" size={18} /> : 'Pay Now'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notifications Drawer */}
+      {showNotifications && (
+        <div className="modal-overlay fade-in-up" style={{position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.7)', zIndex: 10001, display:'flex', alignItems:'flex-end'}}>
+          <div className="glass-panel" style={{width: '100%', height: '70vh', padding: '24px', borderBottomLeftRadius: 0, borderBottomRightRadius: 0, overflowY: 'auto'}}>
+            <div style={{display:'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+              <h3 style={{margin:0}}>Notifications</h3>
+              <button className="glass-btn interactive" style={{padding: '6px 12px', borderRadius: '20px', fontSize: '12px'}} onClick={() => setShowNotifications(false)}>Close</button>
+            </div>
+            <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+              {notifications.length === 0 ? <p style={{color: 'rgba(255,255,255,0.5)', textAlign: 'center', padding: '20px'}}>No recent notifications.</p> : null}
+              {notifications.map(n => (
+                <div key={n.id} className="glass-panel-inner" style={{background: n.read ? 'rgba(255,255,255,0.02)' : 'rgba(96,165,250,0.1)'}}>
+                  <strong style={{display: 'block', fontSize: '14px', marginBottom: '4px'}}>{n.title}</strong>
+                  <p style={{margin:0, fontSize: '13px', color: 'rgba(255,255,255,0.7)'}}>{n.message}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rating Modal */}
+      {showRateModal && bookingToRate && (
+        <div className="modal-overlay fade-in-up" style={{position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.7)', zIndex: 10001, display:'flex', alignItems:'center', justifyContent:'center'}}>
+          <div className="glass-panel" style={{width: '90%', maxWidth: '350px', padding: '24px'}}>
+            <h3 style={{marginTop:0}}>Rate Your Trip</h3>
+            <p className="text-sm" style={{color: 'rgba(255,255,255,0.6)', marginBottom: '16px'}}>{bookingToRate.pickup.split(',')[0]} ➜ {bookingToRate.destination.split(',')[0]}</p>
+            
+            <div style={{display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '20px'}}>
+               {[1, 2, 3, 4, 5].map(star => (
+                 <button key={star} onClick={() => setRating(star)} style={{background: 'none', border: 'none', cursor: 'pointer', fontSize: '28px', color: star <= rating ? '#fbbf24' : 'rgba(255,255,255,0.2)'}}>
+                   ★
+                 </button>
+               ))}
+            </div>
+            
+            <div className="form-group mb-4">
+              <label>Feedback (Optional)</label>
+              <textarea className="glass-input" rows={3} placeholder="How was the journey?" value={feedback} onChange={(e) => setFeedback(e.target.value)}></textarea>
+            </div>
+
+            <div style={{display: 'flex', gap: '12px', marginTop: '24px'}}>
+              <button className="glass-btn interactive" style={{flex: 1, padding: '12px', borderRadius: '8px'}} onClick={() => setShowRateModal(false)}>Cancel</button>
+              <button className="btn-primary-mobile interactive" style={{flex: 1}} onClick={handleSubmitRating} disabled={isSubmittingRating}>
+                {isSubmittingRating ? 'Saving...' : 'Submit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bottom-nav-pill">
         <button className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}><Home size={22} /><span>Home</span></button>
@@ -538,4 +712,7 @@ const globalStyles = `
   .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: transparent; border: none; cursor: pointer; color: rgba(255,255,255,0.4); font-size: 10px; font-weight: 600; padding: 10px 16px; border-radius: 30px; transition: 0.3s; }
   .nav-item.active { color: #fff; background: rgba(255,255,255,0.1); box-shadow: inset 0 1px 0 rgba(255,255,255,0.1); }
   .nav-item.active svg { transform: scale(1.1); color: #60a5fa; }
+  .spin-anim { animation: spin 1s linear infinite; }
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+  .active-amt { background: rgba(96,165,250,0.2) !important; color: #60a5fa !important; }
 `;

@@ -33,3 +33,43 @@ export async function GET() {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export async function PUT(request: Request) {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const payload = verifyTokenNode(token);
+    if (!payload || !payload.id) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const notificationIds = body?.notificationIds;
+
+    if (notificationIds && Array.isArray(notificationIds)) {
+      await db.notification.updateMany({
+        where: {
+          id: { in: notificationIds },
+          userId: payload.id
+        },
+        data: { read: true }
+      });
+    } else {
+      // Mark all as read
+      await db.notification.updateMany({
+        where: { userId: payload.id, read: false },
+        data: { read: true }
+      });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Notifications API Error (PUT):', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}

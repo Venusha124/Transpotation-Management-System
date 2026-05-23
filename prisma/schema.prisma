@@ -15,6 +15,7 @@ model User {
   role         String     @default("CUSTOMER")
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+  walletBalance Float     @default(0)
   
   driverProfile Driver?
   auditLogs     AuditLog[]
@@ -105,6 +106,8 @@ model Booking {
   qrScanned      Boolean       @default(false)
   seatNumber     String?
   scheduledTime  DateTime
+  rating         Int?
+  feedback       String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
