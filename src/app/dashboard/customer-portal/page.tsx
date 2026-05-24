@@ -18,6 +18,8 @@ interface Booking {
   scheduledTime: string;
   seatNumber?: string;
   tripId?: string;
+  rating?: number;
+  feedback?: string;
 }
 
 interface Trip {

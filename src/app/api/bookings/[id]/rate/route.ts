@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { cookies } from 'next/headers';
 import { verifyTokenNode } from '@/lib/auth';
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
@@ -17,7 +17,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const bookingId = params.id;
+    const resolvedParams = await params;
+    const bookingId = resolvedParams.id;
     const { rating, feedback } = await request.json();
 
     if (!rating || rating < 1 || rating > 5) {
