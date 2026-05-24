@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, MapPin, Map, Calendar, ShieldCheck, Zap, ArrowRight, Compass } from 'lucide-react';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 interface Trip {
   id: string;
@@ -81,18 +83,7 @@ export default function LandingPage() {
   return (
     <div className="landing-wrapper">
       {/* Navbar */}
-      <nav className="glass-nav">
-        <div className="nav-container">
-          <div className="logo-box">
-             <img src="/ascendia_logo.png" alt="Ascendia" />
-             <span className="logo-text">ASCENDIA<br/>TRANSPORTS</span>
-          </div>
-          <div className="nav-links">
-            <button className="nav-link" onClick={() => router.push('/login')}>Sign In</button>
-            <button className="btn-primary" onClick={() => router.push('/login')}>Book Now</button>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Hero Section */}
       <header className="hero-section">
@@ -291,9 +282,7 @@ export default function LandingPage() {
       </section>
       
       {/* Footer */}
-      <footer className="footer">
-        <p>© 2026 Ascendia Transports. All Rights Reserved.</p>
-      </footer>
+      <Footer />
     </div>
   );
 }
