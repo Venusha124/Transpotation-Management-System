@@ -524,10 +524,13 @@ export default function PassengerAppPage() {
 
       {/* Top Up Modal */}
       {showTopUp && (
-        <div className="modal-overlay fade-in-up" style={{position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.7)', zIndex: 10001, display:'flex', alignItems:'center', justifyContent:'center'}}>
-          <div className="glass-panel" style={{width: '90%', maxWidth: '350px', padding: '24px'}}>
-            <h3 style={{marginTop:0}}>Top Up E-Wallet</h3>
-            <p className="text-sm" style={{color: 'rgba(255,255,255,0.6)', marginBottom: '16px'}}>Select amount to load via SecureGateway™</p>
+        <div className="modal-overlay fade-in-up" style={{position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.75)', zIndex: 10001, display:'flex', alignItems:'flex-start', justifyContent:'center', padding: '60px 20px', overflowY: 'auto'}}>
+          <div className="glass-panel" style={{width: '100%', maxWidth: '380px', padding: '28px', borderRadius: '20px', margin: 'auto 0'}}>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'8px'}}>
+              <h3 style={{margin:0}}>Top Up E-Wallet</h3>
+              <button className="glass-btn interactive" onClick={() => setShowTopUp(false)} style={{padding:'6px 12px', borderRadius:'20px', fontSize:'12px'}}>✕ Close</button>
+            </div>
+            <p className="text-sm" style={{color: 'rgba(255,255,255,0.6)', marginBottom: '20px'}}>Select amount to load via SecureGateway™</p>
             
             <div style={{display: 'flex', gap: '8px', marginBottom: '16px'}}>
                {[1000, 2000, 5000].map(amt => (
@@ -538,12 +541,12 @@ export default function PassengerAppPage() {
             </div>
             
             <div className="form-group mb-4">
-              <label>Custom Amount</label>
+              <label>Custom Amount (LKR)</label>
               <input type="number" className="glass-input" value={topUpAmount} onChange={(e) => setTopUpAmount(Number(e.target.value))} />
             </div>
 
             <div style={{display: 'flex', gap: '12px', marginTop: '24px'}}>
-              <button className="glass-btn interactive" style={{flex: 1, padding: '12px', borderRadius: '8px'}} onClick={() => setShowTopUp(false)}>Cancel</button>
+              <button className="glass-btn interactive" style={{flex: 1, padding: '14px', borderRadius: '10px'}} onClick={() => setShowTopUp(false)}>Cancel</button>
               <button className="btn-primary-mobile interactive" style={{flex: 1}} onClick={handleTopUpWallet} disabled={isToppingUp}>
                 {isToppingUp ? <RefreshCw className="spin-anim" size={18} /> : 'Pay Now'}
               </button>
@@ -575,14 +578,17 @@ export default function PassengerAppPage() {
 
       {/* Rating Modal */}
       {showRateModal && bookingToRate && (
-        <div className="modal-overlay fade-in-up" style={{position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.7)', zIndex: 10001, display:'flex', alignItems:'center', justifyContent:'center'}}>
-          <div className="glass-panel" style={{width: '90%', maxWidth: '350px', padding: '24px'}}>
-            <h3 style={{marginTop:0}}>Rate Your Trip</h3>
-            <p className="text-sm" style={{color: 'rgba(255,255,255,0.6)', marginBottom: '16px'}}>{bookingToRate.pickup.split(',')[0]} ➜ {bookingToRate.destination.split(',')[0]}</p>
+        <div className="modal-overlay fade-in-up" style={{position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.75)', zIndex: 10001, display:'flex', alignItems:'flex-start', justifyContent:'center', padding: '60px 20px', overflowY: 'auto'}}>
+          <div className="glass-panel" style={{width: '100%', maxWidth: '380px', padding: '28px', borderRadius: '20px', margin: 'auto 0'}}>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'4px'}}>
+              <h3 style={{margin:0}}>Rate Your Trip</h3>
+              <button className="glass-btn interactive" onClick={() => setShowRateModal(false)} style={{padding:'6px 12px', borderRadius:'20px', fontSize:'12px'}}>✕ Close</button>
+            </div>
+            <p className="text-sm" style={{color: 'rgba(255,255,255,0.6)', marginBottom: '20px'}}>{bookingToRate.pickup.split(',')[0]} ➜ {bookingToRate.destination.split(',')[0]}</p>
             
             <div style={{display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '20px'}}>
                {[1, 2, 3, 4, 5].map(star => (
-                 <button key={star} onClick={() => setRating(star)} style={{background: 'none', border: 'none', cursor: 'pointer', fontSize: '28px', color: star <= rating ? '#fbbf24' : 'rgba(255,255,255,0.2)'}}>
+                 <button key={star} onClick={() => setRating(star)} style={{background: 'none', border: 'none', cursor: 'pointer', fontSize: '32px', color: star <= rating ? '#fbbf24' : 'rgba(255,255,255,0.2)'}}>
                    ★
                  </button>
                ))}
@@ -594,9 +600,9 @@ export default function PassengerAppPage() {
             </div>
 
             <div style={{display: 'flex', gap: '12px', marginTop: '24px'}}>
-              <button className="glass-btn interactive" style={{flex: 1, padding: '12px', borderRadius: '8px'}} onClick={() => setShowRateModal(false)}>Cancel</button>
+              <button className="glass-btn interactive" style={{flex: 1, padding: '14px', borderRadius: '10px'}} onClick={() => setShowRateModal(false)}>Cancel</button>
               <button className="btn-primary-mobile interactive" style={{flex: 1}} onClick={handleSubmitRating} disabled={isSubmittingRating}>
-                {isSubmittingRating ? 'Saving...' : 'Submit'}
+                {isSubmittingRating ? 'Saving...' : 'Submit Rating'}
               </button>
             </div>
           </div>

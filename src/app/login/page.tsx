@@ -66,7 +66,7 @@ function LoginForm() {
       if (data.user.role === 'CUSTOMER') {
         router.push('/dashboard/customer-portal');
       } else if (data.user.role === 'DRIVER') {
-        router.push('/dashboard/trips');
+        router.push('/dashboard/route-runs');
       } else {
         router.push('/dashboard');
       }

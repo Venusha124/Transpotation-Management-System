@@ -813,4 +813,75 @@ a {
   padding-top: 16px;
 }
 
+/* ─── Global Utility Buttons & Forms ─────────────────── */
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff; border: none; border-radius: 10px;
+  padding: 10px 20px; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: 0.2s;
+}
+.btn-primary:hover { background: linear-gradient(135deg, #3b82f6, #2563eb); transform: translateY(-1px); }
+
+.btn-primary-sm {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff; border: none; border-radius: 8px;
+  padding: 8px 14px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: 0.2s;
+}
+.btn-primary-sm:hover { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+
+.btn-outline-sm {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: transparent;
+  color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;
+  padding: 8px 14px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: 0.2s;
+}
+.btn-outline-sm:hover { border-color: #60a5fa; color: #60a5fa; }
+
+.btn-icon {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px; padding: 7px; color: rgba(255,255,255,0.7);
+  cursor: pointer; transition: 0.2s; display: flex; align-items: center;
+}
+.btn-icon:hover { border-color: #60a5fa; color: #60a5fa; }
+
+.btn-icon-danger {
+  background: rgba(239,68,68,0.05); border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 8px; padding: 7px; color: #ef4444;
+  cursor: pointer; transition: 0.2s; display: flex; align-items: center;
+}
+.btn-icon-danger:hover { background: rgba(239,68,68,0.15); }
+
+.glass-input {
+  width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px; padding: 10px 12px; color: #fff; font-size: 14px; outline: none; transition: 0.2s;
+}
+.glass-input:focus { border-color: #60a5fa; background: rgba(96,165,250,0.08); }
+.glass-input option { background: #0d1b2a; }
+
+.form-label {
+  display: block; font-size: 12px; font-weight: 600;
+  color: rgba(255,255,255,0.5); text-transform: uppercase;
+  letter-spacing: 0.06em; margin-bottom: 6px;
+}
+
+.alert-error {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 10px; padding: 12px 16px; color: #ef4444; font-size: 14px;
+}
+
+.alert-success {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3);
+  border-radius: 10px; padding: 12px 16px; color: #10b981; font-size: 14px;
+}
+
+/* bg-gradient var fallback */
+:root { --bg-gradient: linear-gradient(135deg, #0d1b2a 0%, #132238 100%); }
+
+
 

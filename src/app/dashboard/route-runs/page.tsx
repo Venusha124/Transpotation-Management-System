@@ -39,6 +39,7 @@ export default function TripsPage() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [routesList, setRoutesList] = useState<any[]>([]);
   
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState('');
@@ -50,8 +51,8 @@ export default function TripsPage() {
   const [destination, setDestination] = useState('');
   const [weight, setWeight] = useState('');
   const [cargoType, setCargoType] = useState('Local Service');
-  const [eta, setEta] = useState('2 hours');
-  const [routePath, setRoutePath] = useState('COLOMBO_JAFFNA'); // Mock route selector
+  const [eta, setEta] = useState('');
+  const [routePath, setRoutePath] = useState(''); // Stores the actual Route ID
 
   const fetchTripsData = async () => {
     try {
@@ -73,8 +74,31 @@ export default function TripsPage() {
         const data = await resDrivers.json();
         setDrivers(data.drivers);
       }
+
+      // Fetch published routes
+      const resRoutes = await fetch('/api/routes?published=true');
+      if (resRoutes.ok) {
+        const data = await resRoutes.json();
+        setRoutesList(data.routes);
+      }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleRouteSelection = (routeId: string) => {
+    setRoutePath(routeId);
+    const selected = routesList.find(r => r.id === routeId);
+    if (selected) {
+      setPickup(selected.startLocation);
+      setDestination(selected.endLocation);
+      const hours = Math.floor(selected.duration / 60);
+      const mins = selected.duration % 60;
+      setEta(`${hours > 0 ? hours + ' hours ' : ''}${mins > 0 ? mins + ' mins' : ''}`.trim());
+    } else {
+      setPickup('');
+      setDestination('');
+      setEta('');
     }
   };
 
@@ -149,64 +173,37 @@ export default function TripsPage() {
     // -- ETA --
     if (!eta.trim() || eta.trim().length < 3) { setError('Please enter a valid estimated journey duration (e.g. "2 hours 30 mins").'); return; }
 
-    // Set mock coordinates and timetables based on route selection
+    const selectedRoute = routesList.find(r => r.id === routePath);
     let routePoints = '[]';
     let waypoints = '[]';
-    if (routePath === 'COLOMBO_KANDY') {
-      routePoints = JSON.stringify([
-        [6.9271, 79.8612], // Colombo
-        [7.0011, 79.9812], // Kadawatha
-        [7.0872, 80.0354], // Yakkala
-        [7.2255, 80.1983], // Warakapola
-        [7.2513, 80.3464], // Kegalle
-        [7.2525, 80.4439], // Mawanella
-        [7.2906, 80.6337]  // Kandy
-      ]);
-      waypoints = JSON.stringify([
-        { stop: 'Colombo Fort', eta: '0:00' },
-        { stop: 'Kadawatha', eta: '0:45' },
-        { stop: 'Warakapola', eta: '1:30' },
-        { stop: 'Kegalle', eta: '2:15' },
-        { stop: 'Kandy', eta: '3:00' }
-      ]);
-    } else if (routePath === 'COLOMBO_GALLE') {
-      routePoints = JSON.stringify([
-        [6.9271, 79.8612], // Colombo
-        [6.5854, 79.9607], // Kalutara
-        [6.4201, 79.9984], // Bentota
-        [6.2443, 80.0543], // Ambalangoda
-        [6.1362, 80.1042], // Hikkaduwa
-        [6.0535, 80.2117]  // Galle
-      ]);
-      waypoints = JSON.stringify([
-        { stop: 'Colombo Fort', eta: '0:00' },
-        { stop: 'Kalutara', eta: '1:00' },
-        { stop: 'Bentota', eta: '1:30' },
-        { stop: 'Hikkaduwa', eta: '2:15' },
-        { stop: 'Galle', eta: '2:45' }
-      ]);
-    } else {
-      // COLOMBO_JAFFNA
-      routePoints = JSON.stringify([
-        [6.9271, 79.8612], // Colombo
-        [7.4863, 80.3647], // Kurunegala
-        [7.8731, 80.6514], // Dambulla
-        [8.3114, 80.4037], // Anuradhapura
-        [8.7542, 80.4982], // Vavuniya
-        [9.3803, 80.3992], // Kilinochchi
-        [9.6615, 80.0255]  // Jaffna
-      ]);
-      waypoints = JSON.stringify([
-        { stop: 'Colombo Fort', eta: '0:00' },
-        { stop: 'Kurunegala', eta: '2:30' },
-        { stop: 'Dambulla', eta: '4:00' },
-        { stop: 'Anuradhapura', eta: '5:30' },
-        { stop: 'Vavuniya', eta: '6:45' },
-        { stop: 'Jaffna', eta: '8:30' }
-      ]);
+
+    if (selectedRoute && selectedRoute.routeStops) {
+      // Create waypoints directly from the database route stops
+      const generatedWaypoints = selectedRoute.routeStops.map((rs: any) => ({
+        stop: rs.stop.name,
+        eta: `+${rs.arrivalOffset} mins`
+      }));
+      waypoints = JSON.stringify(generatedWaypoints);
+
+      // As a fallback for routePoints if lat/lng are provided in the stops
+      const points = selectedRoute.routeStops
+        .filter((rs: any) => rs.stop.latitude && rs.stop.longitude)
+        .map((rs: any) => [parseFloat(rs.stop.latitude), parseFloat(rs.stop.longitude)]);
+      if (points.length > 0) routePoints = JSON.stringify(points);
     }
 
-    const payload = { driverId, vehicleId, pickup: pickup.trim(), destination: destination.trim(), weight: paxNum, cargoType, routePoints, waypoints, eta: eta.trim() };
+    const payload = { 
+      driverId, 
+      vehicleId, 
+      routeId: routePath || undefined,
+      pickup: pickup.trim(), 
+      destination: destination.trim(), 
+      weight: paxNum, 
+      cargoType, 
+      routePoints, 
+      waypoints, 
+      eta: eta.trim() 
+    };
 
     try {
       const res = await fetch('/api/trips', {
@@ -227,8 +224,9 @@ export default function TripsPage() {
   };
 
   return (
-    <div className="dashboard-content animate-fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+    <>
+      <div className="dashboard-content animate-fade-in">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Route size={26} color="var(--primary)" />
@@ -350,12 +348,18 @@ export default function TripsPage() {
           </table>
         </div>
       </div>
+      </div>
 
       {/* Schedule Modal */}
       {modalOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '20px' }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '540px', padding: '30px', background: 'var(--bg-surface)' }}>
-            <h2 style={{ fontSize: '20px', marginBottom: '20px' }}>Schedule & Dispatch Trip</h2>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '60px 20px', overflowY: 'auto' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '780px', padding: '32px', borderRadius: '20px', margin: 'auto 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h3 style={{ margin: 0, color: '#60a5fa', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Route size={20} /> Schedule & Dispatch Trip
+              </h3>
+              <button type="button" className="btn-icon" onClick={() => setModalOpen(false)}>✕</button>
+            </div>
             
             {error && (
               <div style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)', padding: '10px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px' }}>
@@ -394,12 +398,24 @@ export default function TripsPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
+                  <label className="form-label">Bus Route</label>
+                  <select className="form-input" value={routePath} onChange={(e) => handleRouteSelection(e.target.value)}>
+                    <option value="">-- Select Master Route (Optional) --</option>
+                    {routesList.map(r => (
+                      <option key={r.id} value={r.id}>{r.code} — {r.name} ({r.distance}km)</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="form-group">
                   <label className="form-label">Departure Stop</label>
-                  <input type="text" className="form-input" required value={pickup} onChange={(e) => setPickup(e.target.value)} placeholder="e.g. Colombo Fort Bus Stand" />
+                  <input type="text" className="form-input" required value={pickup} onChange={(e) => setPickup(e.target.value)} placeholder="e.g. Colombo Fort Bus Stand" readOnly={!!routePath} style={{ background: routePath ? 'rgba(0,0,0,0.2)' : undefined }} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Arrival Stop</label>
-                  <input type="text" className="form-input" required value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="e.g. Kandy Central Bus Station" />
+                  <input type="text" className="form-input" required value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="e.g. Kandy Central Bus Station" readOnly={!!routePath} style={{ background: routePath ? 'rgba(0,0,0,0.2)' : undefined }} />
                 </div>
               </div>
 
@@ -422,28 +438,20 @@ export default function TripsPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
                   <label className="form-label">Est. Journey Duration</label>
-                  <input type="text" className="form-input" required value={eta} onChange={(e) => setEta(e.target.value)} placeholder="e.g. 2 hours 30 mins" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Bus Route</label>
-                  <select className="form-input" value={routePath} onChange={(e) => setRoutePath(e.target.value)}>
-                    <option value="COLOMBO_JAFFNA">Route 600 — Northern (Colombo Fort → Jaffna)</option>
-                    <option value="COLOMBO_KANDY">Route 101 — Central (Colombo Fort → Kandy)</option>
-                    <option value="COLOMBO_GALLE">Route 304 — Southern (Colombo → Galle)</option>
-                  </select>
+                  <input type="text" className="form-input" required value={eta} onChange={(e) => setEta(e.target.value)} placeholder="e.g. 2 hours 30 mins" readOnly={!!routePath} style={{ background: routePath ? 'rgba(0,0,0,0.2)' : undefined }} />
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
-                <button type="button" onClick={() => setModalOpen(false)} className="btn btn-secondary">Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={availableVehicles.length === 0 || availableDrivers.length === 0}>
-                  Create & Dispatch
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginTop: '30px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '24px' }}>
+                <button type="button" onClick={() => setModalOpen(false)} className="btn btn-secondary" style={{ padding: '12px 24px' }}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={availableVehicles.length === 0 || availableDrivers.length === 0} style={{ padding: '12px 24px' }}>
+                  Create & Dispatch Route Run
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

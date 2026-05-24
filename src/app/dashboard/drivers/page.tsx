@@ -188,8 +188,9 @@ export default function DriversPage() {
   });
 
   return (
-    <div className="dashboard-content animate-fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+    <>
+      <div className="dashboard-content animate-fade-in">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: 700 }}>Driver Management</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Manage shift attendance, licensing constraints, and ratings</p>
@@ -294,14 +295,18 @@ export default function DriversPage() {
           </table>
         </div>
       </div>
+      </div>
 
       {/* Add/Edit Modal */}
       {modalOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '20px' }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '520px', padding: '30px', background: 'var(--bg-surface)' }}>
-            <h2 style={{ fontSize: '20px', marginBottom: '20px' }}>
-              {editingDriver ? 'Edit Driver Profile' : 'Register New Driver'}
-            </h2>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '60px 20px', overflowY: 'auto' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', padding: '32px', borderRadius: '20px', margin: 'auto 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h3 style={{ margin: 0, color: '#60a5fa', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Users size={20} /> {editingDriver ? 'Edit Driver Profile' : 'Register New Driver'}
+              </h3>
+              <button type="button" className="btn-icon" onClick={() => setModalOpen(false)}>✕</button>
+            </div>
             
             {error && (
               <div style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)', padding: '10px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px' }}>
@@ -388,14 +393,14 @@ export default function DriversPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
-                <button type="button" onClick={() => setModalOpen(false)} className="btn btn-secondary">Cancel</button>
-                <button type="submit" className="btn btn-primary">{editingDriver ? 'Update' : 'Register'}</button>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '30px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '24px' }}>
+                <button type="button" onClick={() => setModalOpen(false)} className="btn-outline-sm" style={{ padding: '10px 20px' }}>Cancel</button>
+                <button type="submit" className="btn-primary">{editingDriver ? 'Update Profile' : 'Register Driver'}</button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

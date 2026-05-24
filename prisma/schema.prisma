@@ -89,6 +89,9 @@ model Trip {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
+  routeId        String?
+  route          Route?     @relation(fields: [routeId], references: [id], onDelete: SetNull)
+
   booking        Booking?
 }
 
@@ -176,3 +179,52 @@ model Notification {
   type      String   
   createdAt DateTime @default(now())
 }
+
+// ─── Route Management System ────────────────────────────
+
+model Stop {
+  id        String      @id @default(uuid())
+  name      String
+  code      String      @unique
+  address   String
+  latitude  Float?
+  longitude Float?
+  status    String      @default("ACTIVE") // ACTIVE | INACTIVE
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  routeStops RouteStop[]
+}
+
+model Route {
+  id            String      @id @default(uuid())
+  name          String
+  code          String      @unique
+  startLocation String
+  endLocation   String
+  distance      Float       // km
+  duration      Int         // minutes
+  status        String      @default("DRAFT") // DRAFT | PUBLISHED
+  basePrice     Float       @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  routeStops    RouteStop[]
+  trips         Trip[]
+
+  @@unique([startLocation, endLocation])
+}
+
+model RouteStop {
+  id         String   @id @default(uuid())
+  routeId    String
+  route      Route    @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  stopId     String
+  stop       Stop     @relation(fields: [stopId], references: [id])
+  orderIndex Int      // 0 = first stop, 1 = second, etc.
+  arrivalOffset Int   @default(0) // minutes from route start
+
+  @@unique([routeId, stopId])
+  @@unique([routeId, orderIndex])
+}
+
