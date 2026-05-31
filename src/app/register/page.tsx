@@ -55,7 +55,7 @@ export default function RegisterPage() {
       if (role === 'CUSTOMER') {
         router.push('/dashboard/customer-portal');
       } else if (role === 'DRIVER') {
-        router.push('/dashboard/route-runs');
+        router.push('/driver');
       } else {
         router.push('/dashboard');
       }

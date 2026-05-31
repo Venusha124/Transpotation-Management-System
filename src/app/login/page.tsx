@@ -45,7 +45,7 @@ function LoginForm() {
       if (data.user.role === 'CUSTOMER') {
         defaultPath = '/dashboard/customer-portal';
       } else if (data.user.role === 'DRIVER') {
-        defaultPath = '/dashboard/route-runs';
+        defaultPath = '/driver';
       } else if (data.user.role === 'CONDUCTOR') {
         defaultPath = '/dashboard/conductor';
       }
@@ -74,7 +74,7 @@ function LoginForm() {
       if (data.user.role === 'CUSTOMER') {
         router.push('/dashboard/customer-portal');
       } else if (data.user.role === 'DRIVER') {
-        router.push('/dashboard/route-runs');
+        router.push('/driver');
       } else {
         router.push('/dashboard');
       }

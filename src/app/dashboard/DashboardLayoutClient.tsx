@@ -93,7 +93,7 @@ export default function DashboardLayoutClient({ children, user }: DashboardLayou
 
   const getDefaultRedirect = (role: string): string => {
     if (role === 'CUSTOMER') return '/dashboard/customer-portal';
-    if (role === 'DRIVER') return '/dashboard/route-runs';
+    if (role === 'DRIVER') return '/driver';
     if (role === 'CONDUCTOR') return '/dashboard/conductor';
     return '/dashboard';
   };
