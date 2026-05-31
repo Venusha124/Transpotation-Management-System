@@ -171,8 +171,9 @@ export default function ConductorPOSPage() {
                 if (trip) {
                   const vehicle = vehicles.find(v => v.id === trip.vehicleId);
                   const routeName = `${trip.pickup.split(',')[0]} - ${trip.destination.split(',')[0]}`;
-                  const fare = routeName.includes('Galle') ? 800 : routeName.includes('Nuwara') ? 1200 : routeName.includes('Jaffna') ? 2500 : 500;
-                  setShiftDetails({ bus: vehicle ? vehicle.number : 'Unknown', route: routeName, fare: fare, tripId: trip.id });
+                  // Use the real basePrice from the linked Route Plan, fallback to 500
+                  const fare = trip.route?.basePrice && trip.route.basePrice > 0 ? trip.route.basePrice : 500;
+                  setShiftDetails({ bus: vehicle ? vehicle.number : (trip.vehicle?.number || 'Unknown'), route: routeName, fare: fare, tripId: trip.id });
                 } else {
                   setShiftDetails({ bus: '', route: '', fare: 500, tripId: '' });
                 }
@@ -186,6 +187,27 @@ export default function ConductorPOSPage() {
               ))}
             </select>
           </div>
+
+          {/* Fare Preview Card — shown when a trip is selected */}
+          {shiftDetails.tripId && (
+            <div style={{ background: 'rgba(56,189,248,0.07)', border: '1px solid rgba(56,189,248,0.3)', borderRadius: '12px', padding: '16px', marginBottom: '8px', textAlign: 'left' }}>
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>Route Plan Summary</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>Bus No.</span>
+                <span style={{ fontSize: '13px', fontWeight: 700 }}>{shiftDetails.bus}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>Route</span>
+                <span style={{ fontSize: '13px', fontWeight: 700 }}>{shiftDetails.route}</span>
+              </div>
+              <div style={{ borderTop: '1px dashed rgba(56,189,248,0.2)', marginTop: '10px', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>Fare per Passenger</span>
+                <span style={{ fontSize: '20px', fontWeight: 900, background: 'linear-gradient(135deg,#38bdf8,#3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                  LKR {shiftDetails.fare.toLocaleString()}.00
+                </span>
+              </div>
+            </div>
+          )}
           
           <button 
             className="btn-primary-mobile mt-4 interactive" 
@@ -442,18 +464,32 @@ export default function ConductorPOSPage() {
       {printTicketData && (
         <div className="print-receipt-section">
            <div className="receipt-content">
-              <h3>ASCENDIA TRANSPORTS</h3>
-              <p>Bus: {shiftDetails.bus}</p>
-              <p>Route: {printTicketData.route}</p>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',marginBottom:'4px'}}>
+                <img src="/ascendia_logo.png" alt="Ascendia" style={{width:'32px',height:'32px',objectFit:'contain'}} />
+                <div>
+                  <h3 style={{margin:0,fontSize:'16px',fontWeight:900}}>ASCENDIA</h3>
+                  <p style={{margin:0,fontSize:'9px',letterSpacing:'2px'}}>TRANSPORTS</p>
+                </div>
+              </div>
+              <p style={{fontSize:'10px',margin:'2px 0'}}>No.157Y, Kebellaovita, Polgasovita</p>
+              <p style={{fontSize:'10px',margin:'2px 0'}}>info@ascendiatransports.lk</p>
               <div className="divider"></div>
-              <p className="ticket-id">ID: {printTicketData.id}</p>
-              <p>Seats: <strong>{printTicketData.seats}</strong></p>
+              <p style={{fontSize:'10px',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px'}}>BUS TICKET RECEIPT</p>
+              <div className="divider"></div>
+              <p>Bus No: <strong>{shiftDetails.bus}</strong></p>
+              <p>Route: <strong>{printTicketData.route}</strong></p>
+              <p>Ticket ID: <strong>{printTicketData.id}</strong></p>
+              <p>Seat(s): <strong>{printTicketData.seats}</strong></p>
               <p>Date: {printTicketData.date}</p>
-              <p>Method: {printTicketData.method}</p>
+              <p>Payment: {printTicketData.method === 'CASH' ? '💵 Cash' : '📱 LANKAQR'}</p>
               <div className="divider"></div>
               <h2>LKR {printTicketData.amount.toLocaleString()}.00</h2>
               <div className="divider"></div>
-              <p className="footer-text">Please keep this ticket until the end of your journey.</p>
+              <div style={{display:'flex',justifyContent:'center',margin:'8px 0'}}>
+                <QRCodeSVG value={`ASCENDIA:${printTicketData.id}`} size={80} bgColor="#fff" fgColor="#000" />
+              </div>
+              <p className="footer-text">Thank you for travelling with Ascendia!</p>
+              <p className="footer-text">Please retain this ticket until journey end.</p>
            </div>
         </div>
       )}
@@ -475,19 +511,72 @@ export default function ConductorPOSPage() {
         </>
       )}
 
-      {/* Simulated Print Modal Overlay */}
+      {/* Branded Receipt Modal Overlay */}
       {printTicketData && (
         <div className="print-modal-overlay fade-in-up">
-           <div className="print-modal glass-panel">
-              <Printer size={48} color="#60a5fa" className="mb-4" />
-              <h2>Payment Successful!</h2>
-              <p>Ticket ID: {printTicketData.id}</p>
-              <div className="mock-receipt">
-                 <p className="text-green font-bold">LKR {printTicketData.amount.toLocaleString()}.00</p>
-                 <p>{printTicketData.seats}</p>
-              </div>
-              <button className="btn-primary-mobile interactive mt-4" onClick={executePrint}>🖨️ Print Receipt</button>
-              <button className="btn-secondary-mobile glass-btn interactive mt-2" onClick={() => { setPrintTicketData(null); setPaxCount(1); }}>Skip Printing</button>
+           <div className="print-modal glass-panel" style={{maxWidth:'360px',textAlign:'center'}}>
+
+             {/* Header */}
+             <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'10px',marginBottom:'4px'}}>
+               <img src="/ascendia_logo.png" alt="Ascendia" style={{width:'36px',height:'36px',borderRadius:'8px',objectFit:'contain'}} />
+               <div style={{textAlign:'left'}}>
+                 <div style={{fontWeight:900,fontSize:'16px',letterSpacing:'1px'}}>ASCENDIA</div>
+                 <div style={{fontSize:'9px',letterSpacing:'3px',color:'rgba(255,255,255,0.5)'}}>TRANSPORTS</div>
+               </div>
+             </div>
+             <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginBottom:'16px'}}>Bus Ticket Receipt</div>
+
+             {/* Success Badge */}
+             <div style={{display:'inline-flex',alignItems:'center',gap:'6px',background:'rgba(16,185,129,0.15)',border:'1px solid rgba(16,185,129,0.4)',color:'#34d399',padding:'6px 16px',borderRadius:'20px',fontSize:'13px',fontWeight:700,marginBottom:'20px'}}>
+               <CheckCircle2 size={14} /> Payment Successful
+             </div>
+
+             {/* Receipt Body */}
+             <div style={{background:'rgba(255,255,255,0.04)',border:'1px dashed rgba(56,189,248,0.3)',borderRadius:'12px',padding:'16px',marginBottom:'16px',textAlign:'left'}}>
+               <div style={{display:'flex',justifyContent:'space-between',marginBottom:'8px'}}>
+                 <span style={{fontSize:'12px',color:'rgba(255,255,255,0.5)'}}>Ticket ID</span>
+                 <span style={{fontSize:'12px',fontFamily:'monospace',fontWeight:700,color:'#38bdf8'}}>{printTicketData.id}</span>
+               </div>
+               <div style={{display:'flex',justifyContent:'space-between',marginBottom:'8px'}}>
+                 <span style={{fontSize:'12px',color:'rgba(255,255,255,0.5)'}}>Bus No.</span>
+                 <span style={{fontSize:'12px',fontWeight:700}}>{shiftDetails.bus}</span>
+               </div>
+               <div style={{display:'flex',justifyContent:'space-between',marginBottom:'8px'}}>
+                 <span style={{fontSize:'12px',color:'rgba(255,255,255,0.5)'}}>Route</span>
+                 <span style={{fontSize:'12px',fontWeight:700,textAlign:'right',maxWidth:'55%'}}>{printTicketData.route}</span>
+               </div>
+               <div style={{display:'flex',justifyContent:'space-between',marginBottom:'8px'}}>
+                 <span style={{fontSize:'12px',color:'rgba(255,255,255,0.5)'}}>Seat(s)</span>
+                 <span style={{fontSize:'12px',fontWeight:700,color:'#a78bfa'}}>{printTicketData.seats}</span>
+               </div>
+               <div style={{display:'flex',justifyContent:'space-between',marginBottom:'8px'}}>
+                 <span style={{fontSize:'12px',color:'rgba(255,255,255,0.5)'}}>Payment</span>
+                 <span style={{fontSize:'12px',fontWeight:700}}>{printTicketData.method === 'CASH' ? '💵 Cash' : '📱 LANKAQR'}</span>
+               </div>
+               <div style={{display:'flex',justifyContent:'space-between',marginBottom:'0'}}>
+                 <span style={{fontSize:'12px',color:'rgba(255,255,255,0.5)'}}>Date & Time</span>
+                 <span style={{fontSize:'11px',color:'rgba(255,255,255,0.6)'}}>{printTicketData.date}</span>
+               </div>
+               <div style={{borderTop:'1px dashed rgba(56,189,248,0.2)',margin:'12px 0'}}></div>
+               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                 <span style={{fontSize:'13px',fontWeight:700,color:'rgba(255,255,255,0.8)'}}>TOTAL FARE</span>
+                 <span style={{fontSize:'22px',fontWeight:900,background:'linear-gradient(135deg,#38bdf8,#3b82f6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>LKR {printTicketData.amount.toLocaleString()}.00</span>
+               </div>
+             </div>
+
+             {/* QR Code */}
+             <div style={{display:'flex',justifyContent:'center',marginBottom:'16px'}}>
+               <div style={{background:'white',padding:'10px',borderRadius:'12px',boxShadow:'0 0 20px rgba(56,189,248,0.25)'}}>
+                 <QRCodeSVG value={`ASCENDIA:${printTicketData.id}`} size={100} bgColor="#fff" fgColor="#000" />
+               </div>
+             </div>
+             <p style={{fontSize:'11px',color:'rgba(255,255,255,0.4)',marginBottom:'20px'}}>Scan to verify this ticket</p>
+
+             {/* Actions */}
+             <button className="btn-primary-mobile interactive mb-2" onClick={executePrint}>
+               <Printer size={16} /> Print Physical Receipt
+             </button>
+             <button className="btn-secondary-mobile glass-btn interactive mt-2" onClick={() => { setPrintTicketData(null); setPaxCount(1); }}>Skip Printing</button>
            </div>
         </div>
       )}
@@ -515,22 +604,24 @@ export default function ConductorPOSPage() {
 }
 
 const globalStyles = `
-  .mobile-app-wrapper { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; display: flex; flex-direction: column; overflow: hidden; font-family: 'Inter', sans-serif; color: #f8fafc; background: linear-gradient(135deg, rgba(2, 6, 23, 0.95) 0%, rgba(15, 23, 42, 0.9) 50%, rgba(88, 28, 135, 0.8) 100%), url('/tms_login_bg.png') center center / cover no-repeat; }
+  .mobile-app-wrapper { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; display: flex; flex-direction: column; overflow: hidden; font-family: 'Inter', sans-serif; color: #f8fafc; background: linear-gradient(135deg, rgba(2, 6, 23, 1) 0%, rgba(15, 23, 42, 1) 100%); }
   .fade-in-up { animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
   @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-  .glass-panel { background: rgba(255, 255, 255, 0.04); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); }
-  .glass-panel-inner { background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 16px; }
-  .glass-btn { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #fff; backdrop-filter: blur(8px); }
-  .glass-input { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: white; padding: 14px; border-radius: 10px; width: 100%; outline: none; }
+  .glass-panel { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); }
+  .glass-panel-inner { background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(56, 189, 248, 0.1); border-radius: 12px; padding: 16px; }
+  .glass-btn { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); color: #fff; backdrop-filter: blur(8px); transition: all 0.2s; }
+  .glass-btn:hover { border-color: rgba(56, 189, 248, 0.8); box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); }
+  .glass-input { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); color: white; padding: 14px; border-radius: 10px; width: 100%; outline: none; transition: all 0.2s; }
+  .glass-input:focus { border-color: rgba(56, 189, 248, 0.8); box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); }
   .glass-input option { background: #0f172a; color: white; }
 
   .interactive { transition: transform 0.2s, box-shadow 0.2s, background 0.2s; cursor: pointer; }
   .interactive:active { transform: scale(0.96); }
 
-  .text-gradient { background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .text-gradient { background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .text-green { color: #10b981 !important; }
-  .text-blue { color: #60a5fa !important; }
+  .text-blue { color: #38bdf8 !important; }
   .mt-2 { margin-top: 8px; }
   .mt-4 { margin-top: 16px; }
   .mt-6 { margin-top: 24px; }
@@ -541,7 +632,7 @@ const globalStyles = `
 
   /* Start Shift Screen */
   .start-shift-card { max-width: 400px; width: 100%; margin: 0 auto; padding: 32px 24px; text-align: center; }
-  .icon-badge-large { display: inline-flex; padding: 20px; border-radius: 50%; background: rgba(255,255,255,0.05); margin-bottom: 16px; box-shadow: 0 0 40px rgba(96,165,250,0.2); }
+  .icon-badge-large { display: inline-flex; padding: 20px; border-radius: 50%; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); margin-bottom: 16px; box-shadow: 0 0 40px rgba(56, 189, 248, 0.15); }
   .start-shift-card h2 { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
   .start-shift-card p { font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 32px; }
   .form-group { margin-bottom: 20px; text-align: left; }
@@ -556,36 +647,32 @@ const globalStyles = `
   .icon-btn { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 
   /* Main Conductor Card */
-  .main-card { background: linear-gradient(135deg, rgba(37, 99, 235, 0.8) 0%, rgba(124, 58, 237, 0.8) 100%); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 20px; box-shadow: 0 12px 30px rgba(0,0,0,0.3); }
-  .float-anim { animation: floatBob 6s ease-in-out infinite; }
-  @keyframes floatBob { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
-  /* Main Conductor Card */
-  .main-card { background: #0f172a; color: white; border-radius: 20px; padding: 24px; box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
+  .main-card { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(56, 189, 248, 0.3); color: white; border-radius: 20px; padding: 24px; box-shadow: 0 12px 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(56, 189, 248, 0.05); }
   .float-anim { animation: floatBob 6s ease-in-out infinite; }
   @keyframes floatBob { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
   .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
-  .logo-box { background: white; padding: 4px 8px; border-radius: 8px; }
-  .logo-text { color: #b91c1c; font-weight: 900; font-style: italic; font-size: 10px; line-height: 1; letter-spacing: 1px; }
-  .status-badge { background: #10b981; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
-  .dot { width: 6px; height: 6px; background: white; border-radius: 50%; }
+  .logo-box { background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
+  .logo-text { color: #38bdf8; font-weight: 900; font-style: italic; font-size: 10px; line-height: 1; letter-spacing: 1px; }
+  .status-badge { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.5); color: #34d399; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .dot { width: 6px; height: 6px; background: #34d399; border-radius: 50%; box-shadow: 0 0 8px #34d399; }
   .card-info h3 { font-size: 16px; font-weight: 600; color: white; margin: 0 0 4px; }
   .id-text { font-size: 13px; color: #94a3b8; margin: 0; font-family: monospace; }
   .balances-grid { margin-top: 16px; }
   .balance-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-bottom: 4px; }
-  .balance-amount { font-size: 22px; font-weight: 800; }
-  .eye-icon { color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); padding: 4px; border-radius: 6px; width: 26px; height: 26px; }
-  .qr-container { background: white; padding: 8px; border-radius: 12px; }
+  .balance-amount { font-size: 22px; font-weight: 800; color: #fff; }
+  .eye-icon { color: rgba(56,189,248,0.8); background: rgba(56,189,248,0.1); padding: 4px; border-radius: 6px; width: 26px; height: 26px; }
+  .qr-container { background: rgba(255,255,255,0.9); padding: 8px; border-radius: 12px; box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); }
 
   /* Body Content */
   .body-content { flex: 1; padding: 20px 20px 100px; overflow-y: auto; }
   .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
   .action-card { padding: 16px 8px; text-align: center; }
-  .action-card:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
-  .icon-wrapper { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; background: rgba(255,255,255,0.05); }
+  .action-card:hover { background: rgba(56, 189, 248, 0.1); border-color: rgba(56, 189, 248, 0.4); box-shadow: 0 0 15px rgba(56, 189, 248, 0.1); }
+  .icon-wrapper { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.2); }
   .action-card h4 { font-size: 12px; font-weight: 600; margin: 0; color: #fff; }
   .section-title { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; }
   .empty-state-card { padding: 40px 20px; text-align: center; }
-  .empty-state-card svg { margin: 0 auto 16px; }
+  .empty-state-card svg { margin: 0 auto 16px; color: rgba(56, 189, 248, 0.5); }
   .empty-state-card h4 { font-size: 16px; font-weight: 600; color: #fff; margin: 0 0 6px; }
   .empty-text { font-size: 14px; color: rgba(255,255,255,0.5); font-weight: 500; margin: 0; }
 
@@ -601,16 +688,17 @@ const globalStyles = `
   #qr-reader__status_span { display: none !important; }
   #qr-reader video { object-fit: cover; border-radius: 12px; }
   #qr-reader__dashboard_section_csr span { color: rgba(255,255,255,0.8) !important; font-size: 13px; }
-  #qr-reader__dashboard_section_csr button { background: rgba(255,255,255,0.1) !important; border: 1px solid rgba(255,255,255,0.2) !important; color: white !important; padding: 8px 16px !important; border-radius: 8px !important; font-weight: 600 !important; cursor: pointer !important; margin: 10px 4px !important; transition: background 0.2s !important; }
-  #qr-reader__dashboard_section_csr a { color: #60a5fa !important; text-decoration: none !important; }
-  #qr-reader select { background: rgba(15,23,42,0.8) !important; color: white !important; border: 1px solid rgba(255,255,255,0.2) !important; padding: 8px !important; border-radius: 8px !important; outline: none !important; }
+  #qr-reader__dashboard_section_csr button { background: rgba(56, 189, 248, 0.1) !important; border: 1px solid rgba(56, 189, 248, 0.3) !important; color: white !important; padding: 8px 16px !important; border-radius: 8px !important; font-weight: 600 !important; cursor: pointer !important; margin: 10px 4px !important; transition: background 0.2s !important; }
+  #qr-reader__dashboard_section_csr a { color: #38bdf8 !important; text-decoration: none !important; }
+  #qr-reader select { background: rgba(15,23,42,0.8) !important; color: white !important; border: 1px solid rgba(56, 189, 248, 0.3) !important; padding: 8px !important; border-radius: 8px !important; outline: none !important; }
   
   .manual-test-box { margin-top: 20px; text-align: center; }
-  .btn-test { padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600; width: 100%; border: 1px dashed rgba(255,255,255,0.2); }
+  .btn-test { padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600; width: 100%; border: 1px dashed rgba(56, 189, 248, 0.3); color: rgba(56, 189, 248, 0.8); }
 
-  .btn-primary-mobile { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4); }
-  .btn-secondary-mobile { padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 600; width: 100%; display: flex; align-items: center; justify-content: center; }
-  .btn-success-mobile { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4); }
+  .btn-primary-mobile { background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 8px 20px rgba(14, 165, 233, 0.3); transition: all 0.2s; }
+  .btn-primary-mobile:hover { box-shadow: 0 8px 25px rgba(14, 165, 233, 0.5); transform: translateY(-1px); }
+  .btn-secondary-mobile { padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 600; width: 100%; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); color: #fff; }
+  .btn-success-mobile { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3); transition: all 0.2s; }
 
   .status-box { text-align: center; padding: 30px 10px; }
   .glow-circle { width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; }
@@ -622,40 +710,40 @@ const globalStyles = `
   .detail-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
   .detail-row .label { font-size: 12px; color: rgba(255,255,255,0.5); font-weight: 600; text-transform: uppercase; }
   .detail-row .val { font-size: 15px; font-weight: 700; color: #fff; text-align: right; }
-  .text-accent { color: #a78bfa !important; font-size: 18px !important; }
+  .text-accent { color: #38bdf8 !important; font-size: 18px !important; }
 
   /* Issue Form */
   .issue-form-card { padding: 24px; }
   .pax-selector { display: flex; align-items: center; justify-content: space-between; padding: 6px; }
-  .pax-selector button { width: 44px; height: 44px; border-radius: 8px; font-size: 22px; font-weight: 600; }
+  .pax-selector button { width: 44px; height: 44px; border-radius: 8px; font-size: 22px; font-weight: 600; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; }
   .pax-selector span { font-size: 20px; font-weight: 800; }
   .fare-calc { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; }
   .fare-calc span { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.8); }
-  .fare-calc .amount { font-size: 24px; font-weight: 800; }
+  .fare-calc .amount { font-size: 24px; font-weight: 800; color: #38bdf8; }
 
   .qr-payment-screen { text-align: center; }
   .qr-payment-screen h3 { font-size: 22px; font-weight: 800; margin: 0 0 6px; }
   .qr-payment-screen p { font-size: 14px; color: rgba(255,255,255,0.6); margin: 0 0 32px; }
-  .qr-display-box { display: inline-block; margin-bottom: 24px; background: #fff; padding: 16px; border-radius: 16px; }
-  .payment-amount { font-size: 32px; margin: 0 0 32px; }
+  .qr-display-box { display: inline-block; margin-bottom: 24px; background: #fff; padding: 16px; border-radius: 16px; box-shadow: 0 0 20px rgba(56, 189, 248, 0.3); }
+  .payment-amount { font-size: 32px; margin: 0 0 32px; color: #38bdf8; font-weight: 800; }
 
   /* Manifest & Seat Map */
-  .toggle-btn { background: transparent; border: none; color: rgba(255,255,255,0.5); padding: 6px 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
-  .toggle-btn.active { background: rgba(255,255,255,0.1); color: #fff; }
+  .toggle-btn { background: transparent; border: 1px solid rgba(56, 189, 248, 0.2); color: rgba(255,255,255,0.5); padding: 6px 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+  .toggle-btn.active { background: rgba(56, 189, 248, 0.1); border-color: rgba(56, 189, 248, 0.5); color: #38bdf8; }
   .manifest-list { display: flex; flex-direction: column; gap: 12px; }
-  .manifest-item { padding: 16px; display: flex; justify-content: space-between; align-items: center; }
+  .manifest-item { padding: 16px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(56, 189, 248, 0.1); border-radius: 12px; background: rgba(15, 23, 42, 0.5); }
   .item-left { display: flex; align-items: center; gap: 14px; }
-  .icon-badge { background: rgba(16,185,129,0.1); padding: 8px; border-radius: 50%; }
+  .icon-badge { background: rgba(56, 189, 248, 0.1); padding: 8px; border-radius: 50%; color: #38bdf8; }
   .item-left h4 { margin: 0 0 4px 0; font-size: 15px; font-weight: 700; color: #fff; }
   .item-left p { margin: 0; font-size: 12px; color: rgba(255,255,255,0.5); }
   .item-right { text-align: right; }
-  .seats { display: block; font-size: 15px; font-weight: 800; color: #a78bfa; margin-bottom: 4px; }
+  .seats { display: block; font-size: 15px; font-weight: 800; color: #38bdf8; margin-bottom: 4px; }
   .time { display: block; font-size: 11px; color: rgba(255,255,255,0.4); }
   
   .seat-map-container { padding: 24px; display: flex; flex-direction: column; align-items: center; }
-  .bus-front { border: 1px solid rgba(255,255,255,0.2); padding: 8px 32px; border-radius: 8px; font-size: 12px; font-weight: 700; margin-bottom: 24px; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.5); }
+  .bus-front { border: 1px solid rgba(56, 189, 248, 0.3); padding: 8px 32px; border-radius: 8px; font-size: 12px; font-weight: 700; margin-bottom: 24px; letter-spacing: 2px; text-transform: uppercase; color: #38bdf8; background: rgba(56, 189, 248, 0.05); }
   .seat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; max-width: 260px; margin-bottom: 24px; }
-  .seat-grid > :nth-child(5n+3) { visibility: hidden; } /* Aisle */
+  .seat-grid > :nth-child(5n+3) { visibility: hidden; }
   .seat { padding: 12px 0; text-align: center; border-radius: 8px; font-size: 12px; font-weight: 700; color: white; transition: 0.3s; }
   .seat.available { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16,185,129,0.5); color: #34d399; }
   .seat.booked { background: rgba(239, 68, 68, 0.8); border: 1px solid #ef4444; color: #fff; box-shadow: 0 0 10px rgba(239,68,68,0.5); }
@@ -669,8 +757,8 @@ const globalStyles = `
   .settlement-modal h2 { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
   .settlement-modal p { font-size: 14px; color: rgba(255,255,255,0.6); font-family: monospace; }
   .settlement-grid { display: flex; flex-direction: column; gap: 12px; }
-  .s-box { display: flex; justify-content: space-between; padding: 16px; background: rgba(255,255,255,0.05); border-radius: 12px; }
-  .s-box.highlight { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); }
+  .s-box { display: flex; justify-content: space-between; padding: 16px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.15); border-radius: 12px; }
+  .s-box.highlight { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.4); }
   .s-box .label { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.8); }
   .s-box .val { font-size: 16px; font-weight: 800; }
   .form-actions { display: flex; gap: 16px; }
@@ -681,10 +769,10 @@ const globalStyles = `
   .mock-receipt p { color: #000; margin: 4px 0; font-size: 18px; }
   
   /* Bottom Nav */
-  .bottom-nav-pill { position: fixed; bottom: 24px; left: 24px; right: 24px; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 40px; display: flex; justify-content: space-around; align-items: center; padding: 8px; z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+  .bottom-nav-pill { position: fixed; bottom: 24px; left: 24px; right: 24px; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(24px); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 40px; display: flex; justify-content: space-around; align-items: center; padding: 8px; z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.6), inset 0 0 15px rgba(56, 189, 248, 0.05); }
   .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: transparent; border: none; cursor: pointer; color: rgba(255,255,255,0.4); font-size: 10px; font-weight: 600; padding: 10px 16px; border-radius: 30px; transition: 0.3s; }
-  .nav-item.active { color: #fff; background: rgba(255,255,255,0.1); box-shadow: inset 0 1px 0 rgba(255,255,255,0.1); }
-  .nav-item.active svg { transform: scale(1.1); color: #60a5fa; }
+  .nav-item.active { color: #fff; background: rgba(56, 189, 248, 0.1); box-shadow: inset 0 0 10px rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); }
+  .nav-item.active svg { transform: scale(1.1); color: #38bdf8; }
 
   /* Print Styles for Real Receipt */
   @media print {

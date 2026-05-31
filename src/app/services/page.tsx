@@ -69,7 +69,7 @@ export default function ServicesPage() {
             </div>
             <h2 style={{ fontSize: '32px', marginBottom: '16px' }}>Special Hires</h2>
             <p style={{ color: 'rgba(255,255,255,0.8)', lineHeight: '1.8', textAlign: 'justify' }}>
-              Our bus special hire services offer a variety of options to suit different needs and preferences, including semi luxury, luxury, and super luxury types. Whether you're planning a corporate event, a group outing, or a special occasion, we have buses with various seating capacities to accommodate your group size comfortably.
+              Our bus special hire services offer a variety of options to suit different needs and preferences, including semi luxury, luxury, and super luxury types. Whether you&apos;re planning a corporate event, a group outing, or a special occasion, we have buses with various seating capacities to accommodate your group size comfortably.
               <br/><br/>
               Our semi-luxury buses provide a blend of comfort and affordability, while our luxury buses offer enhanced features for a more refined travel experience. For those seeking the ultimate in comfort and style, our super luxury buses are equipped with top-of-the-line amenities. To learn more about our special hire services or to make a booking, please contact us.
             </p>
@@ -104,7 +104,7 @@ export default function ServicesPage() {
           </div>
 
           <p style={{ color: 'rgba(255,255,255,0.7)', marginTop: '48px', fontSize: '18px', fontStyle: 'italic' }}>
-            "Our comprehensive attention to detail assures you a smooth and hassle-free traveling experience."
+            &quot;Our comprehensive attention to detail assures you a smooth and hassle-free traveling experience.&quot;
           </p>
         </div>
       </section>

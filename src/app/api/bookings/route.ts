@@ -4,8 +4,11 @@ import { cookies } from 'next/headers';
 import { verifyTokenNode } from '@/lib/auth';
 import { db } from '@/lib/db';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const url = new URL(request.url);
+    const tripId = url.searchParams.get('tripId');
+
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -14,7 +17,9 @@ export async function GET() {
     if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     let list;
-    if (payload.role === 'CUSTOMER') {
+    if (tripId) {
+      list = await db.booking.findMany({ where: { tripId } });
+    } else if (payload.role === 'CUSTOMER') {
       list = await db.booking.findMany({ where: { customerId: payload.id } });
     } else {
       list = await db.booking.findMany();
@@ -47,13 +52,23 @@ export async function POST(request: Request) {
       const existingBookings = await db.booking.findMany({ where: { tripId } });
       const requestedSeats = seatNumber.split(',').map((s: string) => s.trim());
       
+      let currentBookedWeight = 0;
       for (const booking of existingBookings) {
+        currentBookedWeight += (booking.weight || 0);
         if (booking.seatNumber) {
           const bookedSeats = booking.seatNumber.split(',').map((s: string) => s.trim());
           const conflict = requestedSeats.find((rs: string) => bookedSeats.includes(rs));
           if (conflict) {
             return NextResponse.json({ error: `Seat ${conflict} is already booked for this route run.` }, { status: 409 });
           }
+        }
+      }
+
+      // Hard Capacity Validation for new feature
+      const trip = await db.trip.findUnique({ where: { id: tripId }, include: { vehicle: true } });
+      if (trip && trip.vehicle) {
+        if ((currentBookedWeight + Number(weight)) > trip.vehicle.capacity) {
+          return NextResponse.json({ error: `Booking exceeds vehicle capacity. Only ${trip.vehicle.capacity - currentBookedWeight} units/seats available.` }, { status: 400 });
         }
       }
     }

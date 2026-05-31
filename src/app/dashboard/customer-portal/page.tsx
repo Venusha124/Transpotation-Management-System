@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Bell, Ticket, MapPin, FolderClock, Home, Eye, Search, Plus, Compass, CheckCircle2, RefreshCw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import SeatMap from '@/components/SeatMap';
+import { useLanguage } from '@/components/LanguageProvider';
 import { isFutureDate } from '@/lib/validators';
 
 interface Booking {
@@ -35,6 +36,7 @@ interface Trip {
 }
 
 export default function PassengerAppPage() {
+  const { t } = useLanguage();
   const [user, setUser] = useState<any>(null);
   
   // Navigation
@@ -55,9 +57,13 @@ export default function PassengerAppPage() {
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [deliveryType, setDeliveryType] = useState('Standard');
   const [scheduledTime, setScheduledTime] = useState('');
-  const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string | undefined }>({});
   const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [error, setError] = useState('');
+  const [paymentError, setPaymentError] = useState('');
+  const [bookedSeats, setBookedSeats] = useState<string[]>([]);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [disputeBookingId, setDisputeBookingId] = useState<string | null>(null);
 
   // New Features State
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -80,6 +86,24 @@ export default function PassengerAppPage() {
     fetchCustomerBookings();
     fetchNotifications();
   }, []);
+
+  useEffect(() => {
+    if (selectedTrip) {
+      fetch(`/api/bookings?tripId=${selectedTrip.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.bookings) {
+            const seats = data.bookings.flatMap((b: any) => 
+              b.seatNumber ? b.seatNumber.split(',').map((s: string) => s.trim()) : []
+            );
+            setBookedSeats(seats);
+          }
+        })
+        .catch(err => console.error("Failed to fetch booked seats", err));
+    } else {
+      setBookedSeats([]);
+    }
+  }, [selectedTrip]);
 
   const fetchUserData = async () => {
     try {
@@ -181,14 +205,40 @@ export default function PassengerAppPage() {
   };
 
   const handlePayInvoice = async (bookingId: string) => {
+    setPaymentError('');
     try {
       const res = await fetch(`/api/bookings/${bookingId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ paymentStatus: 'PAID' })
       });
-      if (res.ok) fetchCustomerBookings();
-    } catch (err) { console.error(err); }
+      if (res.ok) {
+        fetchCustomerBookings();
+        fetchUserData(); // refresh balance
+      } else {
+        const data = await res.json();
+        setPaymentError(data.error || 'Payment failed');
+        setTimeout(() => setPaymentError(''), 5000);
+      }
+    } catch (err) { console.error(err); setPaymentError('Network error'); }
+  };
+
+  const handleCreateDispute = async () => {
+    if (!disputeBookingId || !disputeReason.trim()) return;
+    try {
+      const res = await fetch('/api/disputes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: disputeBookingId, reason: disputeReason })
+      });
+      if (res.ok) {
+        setDisputeBookingId(null);
+        setDisputeReason('');
+        alert('Your issue has been reported. Customer support will contact you soon.');
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleTopUpWallet = async () => {
@@ -335,11 +385,13 @@ export default function PassengerAppPage() {
     </div>
   );
 
-  const renderBook = () => (
+  const renderBook = () => {
+    const { t } = useLanguage();
+    return (
     <div className="book-view fade-in-up">
       <div className="view-header">
-        <h2>Book Ticket</h2>
-        <p>Select a route and reserve your seat</p>
+        <h2>{t('book.title')}</h2>
+        <p>{t('book.subtitle')}</p>
       </div>
 
       <div className="issue-form-card glass-panel">
@@ -370,15 +422,14 @@ export default function PassengerAppPage() {
 
             {selectedTrip && (
               <div className="seat-selection-box glass-panel-inner mt-4 mb-4">
-                <label className="mb-2 block text-sm" style={{color:'rgba(255,255,255,0.7)'}}>Select your seats</label>
+                <label className="mb-2 block text-sm" style={{color:'rgba(255,255,255,0.7)'}}>{t('book.select_seats')}</label>
                 {(() => {
                   const vehicle = vehicles.find(v => v.id === selectedTrip.vehicleId);
                   if (!vehicle) return <p className="text-sm">Loading bus layout...</p>;
-                  const dummyBookedSeats = ['A1', 'A2'];
                   return (
                     <SeatMap 
                       capacity={vehicle.capacity} layout={vehicle.seatLayout || '2x2'}
-                      bookedSeats={dummyBookedSeats} selectedSeats={selectedSeats}
+                      bookedSeats={bookedSeats} selectedSeats={selectedSeats}
                       onSeatSelect={(seatId) => setSelectedSeats(prev => prev.includes(seatId) ? prev.filter(s => s !== seatId) : [...prev, seatId])}
                       maxSelectable={4}
                     />
@@ -410,13 +461,15 @@ export default function PassengerAppPage() {
         )}
       </div>
     </div>
-  );
+  )};
 
-  const renderTrack = () => (
+  const renderTrack = () => {
+    const { t } = useLanguage();
+    return (
     <div className="track-view fade-in-up">
       <div className="view-header">
-        <h2>Track Bus</h2>
-        <p>Enter tracking ID to view live location</p>
+        <h2>{t('track.title')}</h2>
+        <p>{t('track.subtitle')}</p>
       </div>
 
       <div className="scanner-container glass-panel" style={{textAlign: 'left'}}>
@@ -468,14 +521,18 @@ export default function PassengerAppPage() {
         )}
       </div>
     </div>
-  );
+  )};
 
-  const renderTickets = () => (
+  const renderTickets = () => {
+    const { t } = useLanguage();
+    return (
     <div className="history-view fade-in-up">
       <div className="view-header">
-        <h2>My Tickets</h2>
-        <p>Your booking manifest & invoices</p>
+        <h2>{t('tickets.title')}</h2>
+        <p>{t('tickets.subtitle')}</p>
       </div>
+      
+      {paymentError && <div className="error-box mb-4">⚠️ {paymentError}</div>}
       
       <div className="manifest-list">
         {bookings.length === 0 ? (
@@ -501,17 +558,40 @@ export default function PassengerAppPage() {
                     <button onClick={() => { setBookingToRate(booking); setShowRateModal(true); setRating(5); setFeedback(''); }} className="btn-primary-mobile" style={{padding: '6px 10px', fontSize: '10px', borderRadius: '6px', marginTop: '4px'}}>Rate Trip</button>
                   )
                 ) : booking.paymentStatus === 'PENDING' ? (
-                  <button onClick={() => handlePayInvoice(booking.id)} className="btn-success-mobile" style={{padding: '6px 10px', fontSize: '10px', borderRadius: '6px', marginTop: '4px'}}>Pay Now</button>
+                  <button onClick={() => handlePayInvoice(booking.id)} className="btn-success-mobile" style={{padding: '6px 10px', fontSize: '10px', borderRadius: '6px', marginTop: '4px'}}>{t('tickets.pay_now')}</button>
                 ) : (
-                  <span className="badge badge-success" style={{fontSize: '10px', padding: '4px 8px', borderRadius: '6px', background: 'rgba(16,185,129,0.2)', color: '#10b981', border: '1px solid rgba(16,185,129,0.5)'}}>PAID</span>
+                  <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px'}}>
+                    <span className="badge badge-success" style={{fontSize: '10px', padding: '4px 8px', borderRadius: '6px', background: 'rgba(16,185,129,0.2)', color: '#10b981', border: '1px solid rgba(16,185,129,0.5)'}}>{t('tickets.paid')}</span>
+                    <button onClick={() => setDisputeBookingId(booking.id)} className="btn-secondary" style={{padding: '4px 8px', fontSize: '10px', borderRadius: '6px', color: '#fc8181', borderColor: 'rgba(252, 129, 129, 0.3)'}}>Report Issue</button>
+                  </div>
                 )}
               </div>
             </div>
           ))
         )}
       </div>
+
+      {disputeBookingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="glass-panel max-w-md w-full p-6 relative">
+            <h3 className="text-xl font-semibold mb-4 border-b border-white/10 pb-2">Report an Issue</h3>
+            <p className="text-sm mb-4" style={{ color: 'rgba(255,255,255,0.7)' }}>Please describe the issue you faced with this trip. Our support team will investigate and process a refund if applicable.</p>
+            <textarea 
+              className="glass-input w-full mb-4" 
+              rows={4}
+              placeholder="E.g., Bus was severely delayed, AC was not working..."
+              value={disputeReason}
+              onChange={(e) => setDisputeReason(e.target.value)}
+            />
+            <div className="flex justify-end gap-3">
+              <button className="btn-secondary" onClick={() => {setDisputeBookingId(null); setDisputeReason('');}}>Cancel</button>
+              <button className="btn-primary" onClick={handleCreateDispute}>Submit Report</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  );
+  )};
 
   return (
     <div className="mobile-app-wrapper theme-dark-glass">
@@ -609,33 +689,40 @@ export default function PassengerAppPage() {
         </div>
       )}
 
+      {/* MOBILE NAV */}
       <div className="bottom-nav-pill">
-        <button className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}><Home size={22} /><span>Home</span></button>
-        <button className={`nav-item ${activeTab === 'book' ? 'active' : ''}`} onClick={() => setActiveTab('book')}><Ticket size={22} /><span>Book</span></button>
-        <button className={`nav-item ${activeTab === 'track' ? 'active' : ''}`} onClick={() => setActiveTab('track')}><MapPin size={22} /><span>Track</span></button>
-        <button className={`nav-item ${activeTab === 'tickets' ? 'active' : ''}`} onClick={() => setActiveTab('tickets')}><FolderClock size={22} /><span>Tickets</span></button>
+        {(() => { const { t } = useLanguage(); return (
+          <>
+            <button className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}><Home size={22} /><span>{t('nav.home')}</span></button>
+            <button className={`nav-item ${activeTab === 'book' ? 'active' : ''}`} onClick={() => setActiveTab('book')}><Ticket size={22} /><span>{t('nav.book')}</span></button>
+            <button className={`nav-item ${activeTab === 'track' ? 'active' : ''}`} onClick={() => setActiveTab('track')}><MapPin size={22} /><span>{t('nav.track')}</span></button>
+            <button className={`nav-item ${activeTab === 'tickets' ? 'active' : ''}`} onClick={() => setActiveTab('tickets')}><FolderClock size={22} /><span>{t('nav.tickets')}</span></button>
+          </>
+        );})()}
       </div>
     </div>
   );
 }
 
 const globalStyles = `
-  .mobile-app-wrapper { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; display: flex; flex-direction: column; overflow: hidden; font-family: 'Inter', sans-serif; color: #f8fafc; background: linear-gradient(135deg, rgba(2, 6, 23, 0.95) 0%, rgba(15, 23, 42, 0.9) 50%, rgba(88, 28, 135, 0.8) 100%), url('/tms_login_bg.png') center center / cover no-repeat; }
+  .mobile-app-wrapper { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; display: flex; flex-direction: column; overflow: hidden; font-family: 'Inter', sans-serif; color: #f8fafc; background: linear-gradient(135deg, rgba(2, 6, 23, 1) 0%, rgba(15, 23, 42, 1) 100%); }
   .fade-in-up { animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
   @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-  .glass-panel { background: rgba(255, 255, 255, 0.04); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); }
-  .glass-panel-inner { background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 16px; }
-  .glass-btn { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #fff; backdrop-filter: blur(8px); }
-  .glass-input { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: white; padding: 14px; border-radius: 10px; width: 100%; outline: none; }
+  .glass-panel { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); }
+  .glass-panel-inner { background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(56, 189, 248, 0.1); border-radius: 12px; padding: 16px; }
+  .glass-btn { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); color: #fff; backdrop-filter: blur(8px); transition: all 0.2s; }
+  .glass-btn:hover { border-color: rgba(56, 189, 248, 0.8); box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); }
+  .glass-input { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); color: white; padding: 14px; border-radius: 10px; width: 100%; outline: none; transition: all 0.2s; }
+  .glass-input:focus { border-color: rgba(56, 189, 248, 0.8); box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); }
   .glass-input option { background: #0f172a; color: white; }
 
   .interactive { transition: transform 0.2s, box-shadow 0.2s, background 0.2s; cursor: pointer; }
   .interactive:active { transform: scale(0.96); }
 
-  .text-gradient { background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .text-gradient { background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .text-green { color: #10b981 !important; }
-  .text-blue { color: #60a5fa !important; }
+  .text-blue { color: #38bdf8 !important; }
   .mt-2 { margin-top: 8px; }
   .mt-4 { margin-top: 16px; }
   .mt-6 { margin-top: 24px; }
@@ -655,32 +742,32 @@ const globalStyles = `
   .icon-btn { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 
   /* E-Wallet Passenger Card */
-  .main-card { background: #0f172a; color: white; border-radius: 20px; padding: 24px; box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
+  .main-card { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(56, 189, 248, 0.3); color: white; border-radius: 20px; padding: 24px; box-shadow: 0 12px 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(56, 189, 248, 0.05); }
   .float-anim { animation: floatBob 6s ease-in-out infinite; }
   @keyframes floatBob { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
   .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
-  .logo-box { background: white; padding: 4px 8px; border-radius: 8px; }
-  .logo-text { color: #b91c1c; font-weight: 900; font-style: italic; font-size: 10px; line-height: 1; letter-spacing: 1px; }
-  .status-badge { background: #10b981; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
-  .dot { width: 6px; height: 6px; background: white; border-radius: 50%; }
+  .logo-box { background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
+  .logo-text { color: #38bdf8; font-weight: 900; font-style: italic; font-size: 10px; line-height: 1; letter-spacing: 1px; }
+  .status-badge { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.5); color: #34d399; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .dot { width: 6px; height: 6px; background: #34d399; border-radius: 50%; box-shadow: 0 0 8px #34d399; }
   .card-info h3 { font-size: 16px; font-weight: 600; color: white; margin: 0 0 4px; }
   .id-text { font-size: 13px; color: #94a3b8; margin: 0; font-family: monospace; }
   .balances-grid { margin-top: 16px; }
   .balance-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-bottom: 4px; }
-  .balance-amount { font-size: 22px; font-weight: 800; }
-  .eye-icon { color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); padding: 4px; border-radius: 6px; width: 26px; height: 26px; }
-  .qr-container { background: white; padding: 8px; border-radius: 12px; }
+  .balance-amount { font-size: 22px; font-weight: 800; color: #fff; }
+  .eye-icon { color: rgba(56,189,248,0.8); background: rgba(56,189,248,0.1); padding: 4px; border-radius: 6px; width: 26px; height: 26px; }
+  .qr-container { background: rgba(255,255,255,0.9); padding: 8px; border-radius: 12px; box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); }
 
   /* Body Content */
   .body-content { flex: 1; padding: 20px 20px 100px; overflow-y: auto; }
   .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
   .action-card { padding: 16px 8px; text-align: center; }
-  .action-card:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
-  .icon-wrapper { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; background: rgba(255,255,255,0.05); }
+  .action-card:hover { background: rgba(56, 189, 248, 0.1); border-color: rgba(56, 189, 248, 0.4); box-shadow: 0 0 15px rgba(56, 189, 248, 0.1); }
+  .icon-wrapper { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.2); }
   .action-card h4 { font-size: 12px; font-weight: 600; margin: 0; color: #fff; }
   .section-title { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; }
   .empty-state-card { padding: 40px 20px; text-align: center; }
-  .empty-state-card svg { margin: 0 auto 16px; }
+  .empty-state-card svg { margin: 0 auto 16px; color: rgba(56, 189, 248, 0.5); }
   .empty-state-card h4 { font-size: 16px; font-weight: 600; color: #fff; margin: 0 0 6px; }
   .empty-text { font-size: 14px; color: rgba(255,255,255,0.5); font-weight: 500; margin: 0; }
   .error-box { background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2); padding: 12px; border-radius: 8px; font-size: 13px; }
@@ -693,8 +780,9 @@ const globalStyles = `
   .view-header p { font-size: 14px; color: rgba(255,255,255,0.6); margin: 0; font-family: monospace; font-weight: bold; }
 
   .scanner-container { padding: 16px; }
-  .btn-primary-mobile { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4); }
-  .btn-success-mobile { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4); }
+  .btn-primary-mobile { background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 8px 20px rgba(14, 165, 233, 0.3); transition: all 0.2s; }
+  .btn-primary-mobile:hover { box-shadow: 0 8px 25px rgba(14, 165, 233, 0.5); transform: translateY(-1px); }
+  .btn-success-mobile { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3); transition: all 0.2s; }
 
   .status-box { text-align: center; padding: 30px 10px; }
   .glow-circle { width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; }
@@ -706,21 +794,21 @@ const globalStyles = `
 
   /* Manifest & Seat Map */
   .manifest-list { display: flex; flex-direction: column; gap: 12px; }
-  .manifest-item { padding: 16px; display: flex; justify-content: space-between; align-items: center; }
+  .manifest-item { padding: 16px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(56, 189, 248, 0.1); border-radius: 12px; background: rgba(15, 23, 42, 0.5); }
   .item-left { display: flex; align-items: center; gap: 14px; }
-  .icon-badge { background: rgba(16,185,129,0.1); padding: 8px; border-radius: 50%; }
+  .icon-badge { background: rgba(56, 189, 248, 0.1); padding: 8px; border-radius: 50%; color: #38bdf8; }
   .item-left h4 { margin: 0 0 4px 0; font-size: 15px; font-weight: 700; color: #fff; }
   .item-left p { margin: 0; font-size: 12px; color: rgba(255,255,255,0.5); }
   .item-right { text-align: right; }
-  .seats { display: block; font-size: 15px; font-weight: 800; color: #a78bfa; margin-bottom: 4px; }
+  .seats { display: block; font-size: 15px; font-weight: 800; color: #38bdf8; margin-bottom: 4px; }
   .time { display: block; font-size: 11px; color: rgba(255,255,255,0.4); }
   
   /* Bottom Nav */
-  .bottom-nav-pill { position: fixed; bottom: 24px; left: 24px; right: 24px; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 40px; display: flex; justify-content: space-around; align-items: center; padding: 8px; z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+  .bottom-nav-pill { position: fixed; bottom: 24px; left: 24px; right: 24px; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(24px); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 40px; display: flex; justify-content: space-around; align-items: center; padding: 8px; z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.6), inset 0 0 15px rgba(56, 189, 248, 0.05); }
   .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: transparent; border: none; cursor: pointer; color: rgba(255,255,255,0.4); font-size: 10px; font-weight: 600; padding: 10px 16px; border-radius: 30px; transition: 0.3s; }
-  .nav-item.active { color: #fff; background: rgba(255,255,255,0.1); box-shadow: inset 0 1px 0 rgba(255,255,255,0.1); }
-  .nav-item.active svg { transform: scale(1.1); color: #60a5fa; }
+  .nav-item.active { color: #fff; background: rgba(56, 189, 248, 0.1); box-shadow: inset 0 0 10px rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); }
+  .nav-item.active svg { transform: scale(1.1); color: #38bdf8; }
   .spin-anim { animation: spin 1s linear infinite; }
   @keyframes spin { 100% { transform: rotate(360deg); } }
-  .active-amt { background: rgba(96,165,250,0.2) !important; color: #60a5fa !important; }
+  .active-amt { background: rgba(56, 189, 248, 0.2) !important; color: #38bdf8 !important; border: 1px solid rgba(56, 189, 248, 0.3); }
 `;

@@ -48,7 +48,7 @@ export default function AboutPage() {
             borderRadius: '4px'
           }}></div>
           <img 
-            src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=800" 
+            src="/bus-gallery/Images_for_ASCENDIA_Transports_2K_202605311121.jpeg" 
             alt="Ascendia Fleet" 
             style={{ 
               position: 'relative', 

@@ -17,10 +17,33 @@ export async function PUT(
 
     const updateData: any = {};
     if (status) updateData.status = status;
-    if (paymentStatus) {
+    
+    if (paymentStatus === 'PAID' && booking.paymentStatus !== 'PAID') {
+      const payment = await db.payment.findFirst({ where: { bookingId: id } });
+      if (payment) {
+        const user = await db.user.findUnique({ where: { id: booking.customerId } });
+        if (!user) return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
+        
+        if (user.walletBalance < payment.amount) {
+          return NextResponse.json({ error: `Insufficient wallet balance. You need LKR ${payment.amount.toFixed(2)}.` }, { status: 400 });
+        }
+        
+        await db.user.update({
+          where: { id: user.id },
+          data: { walletBalance: user.walletBalance - payment.amount }
+        });
+        
+        await db.payment.update({
+          where: { id: payment.id },
+          data: { status: 'PAID' }
+        });
+        
+        updateData.paymentStatus = 'PAID';
+      } else {
+        updateData.paymentStatus = paymentStatus;
+      }
+    } else if (paymentStatus) {
       updateData.paymentStatus = paymentStatus;
-      
-      // Update linked payment records as well
       const paymentsList = await db.payment.findMany({ where: { bookingId: id } });
       if (paymentsList.length > 0) {
         await db.payment.update({

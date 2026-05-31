@@ -4,7 +4,19 @@ import { db } from '@/lib/db';
 
 export async function GET() {
   try {
-    const list = await db.trip.findMany();
+    const list = await db.trip.findMany({
+      include: {
+        route: {
+          select: { id: true, name: true, basePrice: true, distance: true },
+        },
+        vehicle: {
+          select: { id: true, number: true, brand: true, model: true },
+        },
+        driver: {
+          select: { id: true, name: true },
+        },
+      },
+    });
     return NextResponse.json({ success: true, trips: list });
   } catch (error) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

@@ -5,10 +5,21 @@ import Footer from '@/components/Footer';
 
 export default function GalleryPage() {
   const images = [
-    'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=800',
-    'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&q=80&w=800',
-    'https://images.unsplash.com/photo-1557223562-6c77ef161f16?auto=format&fit=crop&q=80&w=800',
-    'https://images.unsplash.com/photo-1464219789935-c2d9d9aba644?auto=format&fit=crop&q=80&w=800'
+    '/bus-gallery/Erase_the_Number_Plate_2K_202605311130.jpeg',
+    '/bus-gallery/Give_like_this_images_for_202605311156.jpeg',
+    '/bus-gallery/Give_like_this_images_for_202605311200.jpeg',
+    '/bus-gallery/Image_names_use_as_Ascendia_202605311153.jpeg',
+    '/bus-gallery/Images_for_ASCENDIA_Transports_2K_202605311120.jpeg',
+    '/bus-gallery/Images_for_ASCENDIA_Transports_2K_202605311121.jpeg',
+    '/bus-gallery/Screenshot 2026-05-31 121246.png',
+    '/bus-gallery/Screenshot 2026-05-31 121317.png',
+    '/bus-gallery/Screenshot 2026-05-31 121416.png',
+    '/bus-gallery/Screenshot 2026-05-31 121522.png',
+    '/bus-gallery/Screenshot 2026-05-31 122636.png',
+    '/bus-gallery/Screenshot 2026-05-31 122717.png',
+    '/bus-gallery/Screenshot 2026-05-31 122741.png',
+    '/bus-gallery/Screenshot 2026-05-31 122834.png',
+    '/bus-gallery/Use_like_the_given_bus_202605311136.jpeg'
   ];
 
   return (

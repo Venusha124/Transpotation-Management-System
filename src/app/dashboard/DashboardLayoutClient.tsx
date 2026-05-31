@@ -6,9 +6,10 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Bus, Users, MapPin, Route, Ticket,
   MapPinned, Wrench, Flame, Receipt, BarChart3,
-  Settings, LogOut, User as UserIcon, Menu, X, Bell, QrCode
+  Settings, LogOut, User as UserIcon, Menu, X, Bell, QrCode, AlertCircle, Brain, TrendingUp
 } from 'lucide-react';
 import styles from './DashboardLayout.module.css';
+import { useLanguage } from '@/components/LanguageProvider';
 
 interface DashboardLayoutClientProps {
   children: React.ReactNode;
@@ -21,6 +22,7 @@ export default function DashboardLayoutClient({ children, user }: DashboardLayou
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const { language, setLanguage } = useLanguage();
 
   useEffect(() => {
     async function fetchNotifications() {
@@ -72,6 +74,9 @@ export default function DashboardLayoutClient({ children, user }: DashboardLayou
     { name: 'Fuel Logs', path: '/dashboard/fuel', icon: Flame, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'ACCOUNTANT'] },
     { name: 'Billing & Revenue', path: '/dashboard/billing', icon: Receipt, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'ACCOUNTANT'] },
     { name: 'Reports & Analytics', path: '/dashboard/reports', icon: BarChart3, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'ACCOUNTANT'] },
+    { name: 'AI Forecast', path: '/dashboard/ai-analytics', icon: Brain, roles: ['ADMIN', 'TRANSPORT_MANAGER'] },
+    { name: 'Fleet Heatmap', path: '/dashboard/fleet-utilization', icon: TrendingUp, roles: ['ADMIN', 'TRANSPORT_MANAGER'] },
+    { name: 'Disputes & Refunds', path: '/dashboard/disputes', icon: AlertCircle, roles: ['ADMIN', 'TRANSPORT_MANAGER'] },
     { name: 'Conductor POS', path: '/dashboard/conductor', icon: QrCode, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'CONDUCTOR'] },
     { name: 'Passenger Portal', path: '/dashboard/customer-portal', icon: UserIcon, roles: ['CUSTOMER'] },
     { name: 'System Admin Panel', path: '/dashboard/admin', icon: Settings, roles: ['ADMIN'] },
@@ -129,6 +134,15 @@ export default function DashboardLayoutClient({ children, user }: DashboardLayou
         <header className={styles.header}>
           <button className={styles.menuBtn} onClick={() => setSidebarOpen(!sidebarOpen)}><Menu size={24} /></button>
           <div className={styles.headerActions}>
+            <select 
+              value={language} 
+              onChange={(e) => setLanguage(e.target.value as 'en'|'si'|'ta')}
+              style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '4px', padding: '4px 8px', marginRight: '16px', outline: 'none' }}
+            >
+              <option value="en" style={{ color: 'black' }}>ENG</option>
+              <option value="si" style={{ color: 'black' }}>SIN</option>
+              <option value="ta" style={{ color: 'black' }}>TAM</option>
+            </select>
             <div className={styles.notificationWrapper}>
               <button className={styles.actionBtn} onClick={() => setNotificationsOpen(!notificationsOpen)}>
                 <Bell size={20} />

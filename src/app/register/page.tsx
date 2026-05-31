@@ -67,99 +67,114 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className={styles.authContainer}>
-      {/* ── Background Striped Circles ── */}
-      <div className={`${styles.stripedCircle} ${styles.stripedCircleRight}`} />
-      <div className={`${styles.stripedCircle} ${styles.stripedCircleBottom}`} />
-
-      <div className={styles.authCard}>
-        <div className={styles.logoHeader}>
-          <div className={styles.logoIcon} style={{ background: 'transparent', padding: 0 }}>
-            <img src="/ascendia_logo.png" alt="Ascendia Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '14px', boxShadow: '0 4px 15px rgba(0,0,0,0.5)' }} />
-          </div>
-          <h2 className={styles.logoTitle}>Join Ascendia</h2>
-          <p className={styles.logoSubtitle}>Create your transportation profile</p>
+    <div className={styles.splitContainer}>
+      {/* ── Left Side: Visual Showcase ── */}
+      <div className={styles.imageShowcase}>
+        <div className={styles.techOverlay}></div>
+        <div className={styles.scannerLine}></div>
+        
+        <div className={styles.brandWatermark}>
+          <h1>Ascendia</h1>
+          <p>Next-Gen Transport Logistics</p>
         </div>
+      </div>
 
-        {error && (
-          <div className={styles.errorBanner}>
-            <span>⚠️</span>
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className={styles.authLabel} htmlFor="name">Full Name</label>
-            <input 
-              id="name"
-              type="text" 
-              className={styles.authInput} 
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. John Doe"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label className={styles.authLabel} htmlFor="email">Email Address</label>
-            <input 
-              id="email"
-              type="email" 
-              className={styles.authInput} 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. john@example.com"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label className={styles.authLabel} htmlFor="password">Password</label>
-            <input 
-              id="password"
-              type="password" 
-              className={styles.authInput} 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="role">Functional Role</label>
-            <div className={styles.selectWrapper}>
-              <select 
-                id="role"
-                className={styles.roleSelect} 
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-              >
-                <option value="CUSTOMER">Customer (Book & Track cargo)</option>
-                <option value="DRIVER">Driver (Manage routes & logs)</option>
-                <option value="ACCOUNTANT">Accountant (Manage billing & invoices)</option>
-                <option value="DISPATCHER">Dispatcher (Schedule trips & approve bookings)</option>
-                <option value="TRANSPORT_MANAGER">Transport Manager (Fleet overview)</option>
-              </select>
+      {/* ── Right Side Auth Form ── */}
+      <div className={styles.authSide}>
+        <div className={styles.authCard}>
+          <div className={styles.logoHeader}>
+            <div className={styles.logoIcon} style={{ background: 'transparent', padding: 0 }}>
+              <img src="/ascendia_logo.png" alt="Ascendia Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '14px', boxShadow: '0 4px 15px rgba(0,0,0,0.5)' }} />
             </div>
+            <h2 className={styles.logoTitle}>Join Ascendia</h2>
+            <p className={styles.logoSubtitle}>Create your transportation profile</p>
           </div>
 
-          <button 
-            type="submit" 
-            className={styles.btnSubmit}
-            disabled={loading}
-          >
-            {loading ? 'Registering...' : 'Register'}
-          </button>
-        </form>
+          {error && (
+            <div className={styles.errorBanner}>
+              <span>⚠️</span>
+              <span>{error}</span>
+            </div>
+          )}
 
-        <div className={styles.authFooter}>
-          Already have an account ?
-          <Link href="/login" className={styles.authLink}>
-            Sign In here
-          </Link>
+          <form onSubmit={handleSubmit}>
+            <div className={styles.formGroup}>
+              <label className={styles.authLabel} htmlFor="name">Full Name</label>
+              <input 
+                id="name"
+                type="text" 
+                className={styles.authInput} 
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. John Doe"
+                required
+              />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.authLabel} htmlFor="email">Email Address</label>
+              <input 
+                id="email"
+                type="email" 
+                className={styles.authInput} 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="e.g. john@example.com"
+                required
+              />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.authLabel} htmlFor="password">Password</label>
+              <input 
+                id="password"
+                type="password" 
+                className={styles.authInput} 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+              />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.authLabel} htmlFor="role">Functional Role</label>
+              <div className={styles.selectWrapper}>
+                <select 
+                  id="role"
+                  className={styles.roleSelect} 
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  style={{ width: '100%', padding: '14px 16px', background: 'rgba(30, 41, 59, 0.5)', border: '1px solid rgba(148, 163, 184, 0.2)', borderRadius: '12px', color: '#ffffff', outline: 'none' }}
+                >
+                  <option style={{ background: '#0f172a' }} value="CUSTOMER">Customer (Book & Track cargo)</option>
+                  <option style={{ background: '#0f172a' }} value="DRIVER">Driver (Manage routes & logs)</option>
+                  <option style={{ background: '#0f172a' }} value="ACCOUNTANT">Accountant (Manage billing & invoices)</option>
+                  <option style={{ background: '#0f172a' }} value="DISPATCHER">Dispatcher (Schedule trips)</option>
+                  <option style={{ background: '#0f172a' }} value="TRANSPORT_MANAGER">Transport Manager (Fleet overview)</option>
+                </select>
+              </div>
+            </div>
+
+            <button 
+              type="submit" 
+              className={styles.btnSubmit}
+              disabled={loading}
+            >
+              {loading ? 'Registering...' : 'Register'}
+            </button>
+          </form>
+
+          <div className={styles.authFooter}>
+            Already have an account?
+            <Link href="/login" className={styles.authLink}>
+              Sign In here
+            </Link>
+          </div>
+          
+          <div className={styles.copyright}>
+            © {new Date().getFullYear()} ASCENDIA SOLUTIONS
+          </div>
         </div>
       </div>
     </div>

@@ -21,6 +21,7 @@ model User {
   auditLogs     AuditLog[]
   notifications Notification[]
   bookings      Booking[]
+  disputes      Dispute[]
 }
 
 model Vehicle {
@@ -92,7 +93,7 @@ model Trip {
   routeId        String?
   route          Route?     @relation(fields: [routeId], references: [id], onDelete: SetNull)
 
-  booking        Booking?
+  bookings       Booking[]
 }
 
 model Booking {
@@ -114,9 +115,10 @@ model Booking {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  tripId         String?       @unique
+  tripId         String?
   trip           Trip?         @relation(fields: [tripId], references: [id], onDelete: SetNull)
   payments       Payment[]
+  disputes       Dispute[]
 }
 
 model Maintenance {
@@ -226,5 +228,18 @@ model RouteStop {
 
   @@unique([routeId, stopId])
   @@unique([routeId, orderIndex])
+}
+
+model Dispute {
+  id            String   @id @default(uuid())
+  bookingId     String
+  booking       Booking  @relation(fields: [bookingId], references: [id])
+  customerId    String
+  customer      User     @relation(fields: [customerId], references: [id])
+  reason        String
+  status        String   @default("OPEN") // OPEN, RESOLVED, REJECTED
+  refundAmount  Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
