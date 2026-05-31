@@ -47,8 +47,10 @@ export async function POST(request: Request) {
     const user = await requireAdmin();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+
+
     const body = await request.json();
-    const { name, code, startLocation, endLocation, distance, duration, basePrice, stops, publish } = body;
+    const { name, code, startLocation, endLocation, distance, duration, basePrice, stops, publish, type } = body;
 
     // ─── Validation Rules ───────────────────────────────────────
 
@@ -114,6 +116,7 @@ export async function POST(request: Request) {
         duration: parseInt(duration),
         basePrice: basePrice ? parseFloat(basePrice) : 0,
         status: publish ? 'PUBLISHED' : 'DRAFT',
+        type: type || 'EXPRESS',
         routeStops: {
           create: stops.map((s: any, idx: number) => ({
             stopId: s.stopId,

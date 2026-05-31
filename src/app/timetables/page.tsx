@@ -27,8 +27,25 @@ interface RouteData {
   duration: number;
   basePrice: number;
   status: string;
+  type: string;
   routeStops: RouteStop[];
 }
+
+const getRouteTypeBadge = (type: string) => {
+  const t = (type || 'EXPRESS').toUpperCase();
+  switch (t) {
+    case 'EXPRESS':
+      return { label: 'EXPRESS', color: '#a78bfa', bg: 'rgba(139,92,246,0.15)', border: 'rgba(139,92,246,0.3)' };
+    case 'INTERCITY':
+      return { label: 'INTERCITY', color: '#60a5fa', bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)' };
+    case 'MULTI_ROUTE':
+      return { label: 'MULTI-ROUTE', color: '#10b981', bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)' };
+    case 'CHARTER':
+      return { label: 'CHARTER', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.3)' };
+    default:
+      return { label: 'EXPRESS', color: '#a78bfa', bg: 'rgba(139,92,246,0.15)', border: 'rgba(139,92,246,0.3)' };
+  }
+};
 
 function formatDuration(minutes: number) {
   const h = Math.floor(minutes / 60);
@@ -81,7 +98,25 @@ function RouteCard({ route }: { route: RouteData }) {
 
         {/* Route Name & Direction */}
         <div style={{ flex: 1, minWidth: '200px' }}>
-          <div style={{ fontSize: '20px', fontWeight: '700', color: '#fff', marginBottom: '6px' }}>{route.name}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '20px', fontWeight: '700', color: '#fff' }}>{route.name}</span>
+            {(() => {
+              const badge = getRouteTypeBadge(route.type);
+              return (
+                <span style={{ 
+                  padding: '2px 10px', 
+                  borderRadius: '12px', 
+                  fontSize: '10px', 
+                  fontWeight: 800, 
+                  background: badge.bg, 
+                  color: badge.color, 
+                  border: `1px solid ${badge.border}` 
+                }}>
+                  {badge.label}
+                </span>
+              );
+            })()}
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '14px', flexWrap: 'wrap' }}>
             <span style={{ color: '#93c5fd', fontWeight: '600' }}>{route.startLocation}</span>
             <ArrowRight size={14} color="#60a5fa" />

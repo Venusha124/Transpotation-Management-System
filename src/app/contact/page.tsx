@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { MapPin, Phone, Mail, Send, MessageSquare, Map, User, AtSign, BookOpen, AlignLeft } from 'lucide-react';
@@ -104,6 +104,79 @@ const FloatingField = ({
 };
 
 export default function ContactPage() {
+  const defaultRoutes = [
+    { tag: 'Express', tagColor: '#a78bfa', route: 'Colombo ➜ Jaffna', num: '077 107 5555', bg: 'rgba(139,92,246,0.15)', border: 'rgba(139,92,246,0.3)', iconColor: '#c4b5fd' },
+    { tag: 'Intercity', tagColor: '#60a5fa', route: 'Panadura ⇌ Kandy', num: '077 779 8600', bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)', iconColor: '#93c5fd' },
+    { tag: 'Multi-Route', tagColor: '#10b981', route: 'Makumbura ⇌ Badulla / Colombo ⇌ Passara', num: '076 138 2300', bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)', iconColor: '#6ee7b7' },
+    { tag: 'Charter', tagColor: '#f59e0b', route: 'Special Hires', num: '074 289 3612', bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.3)', iconColor: '#fcd34d' },
+  ];
+  const [activeRoutes, setActiveRoutes] = useState<any[]>(defaultRoutes);
+
+  useEffect(() => {
+    fetch('/api/routes?published=true')
+      .then(res => res.json())
+      .then(data => {
+        if (data.routes && data.routes.length > 0) {
+          const firstThree = data.routes.slice(0, 3);
+          const mapped = firstThree.map((route: any) => {
+            let tag = 'Express';
+            let tagColor = '#a78bfa';
+            let bg = 'rgba(139,92,246,0.15)';
+            let border = 'rgba(139,92,246,0.3)';
+            let iconColor = '#c4b5fd';
+            let num = '077 107 5555';
+
+            const type = (route.type || 'EXPRESS').toUpperCase();
+            if (type === 'INTERCITY') {
+              tag = 'Intercity';
+              tagColor = '#60a5fa';
+              bg = 'rgba(59,130,246,0.15)';
+              border = 'rgba(59,130,246,0.3)';
+              iconColor = '#93c5fd';
+              num = '077 779 8600';
+            } else if (type === 'MULTI_ROUTE') {
+              tag = 'Multi-Route';
+              tagColor = '#10b981';
+              bg = 'rgba(16,185,129,0.15)';
+              border = 'rgba(16,185,129,0.3)';
+              iconColor = '#6ee7b7';
+              num = '076 138 2300';
+            } else if (type === 'CHARTER') {
+              tag = 'Charter';
+              tagColor = '#f59e0b';
+              bg = 'rgba(245,158,11,0.15)';
+              border = 'rgba(245,158,11,0.3)';
+              iconColor = '#fcd34d';
+              num = '074 289 3612';
+            }
+
+            return {
+              tag,
+              tagColor,
+              route: `${route.startLocation} ⇌ ${route.endLocation}`,
+              num,
+              bg,
+              border,
+              iconColor
+            };
+          });
+          
+          mapped.push({
+            tag: 'Charter',
+            tagColor: '#f59e0b',
+            route: 'Special Hires',
+            num: '074 289 3612',
+            bg: 'rgba(245,158,11,0.15)',
+            border: 'rgba(245,158,11,0.3)',
+            iconColor: '#fcd34d'
+          });
+
+          setActiveRoutes(mapped);
+        }
+      })
+      .catch(console.error);
+  }, []);
+
   return (
     <div className="landing-wrapper">
       <Navbar />
@@ -164,12 +237,7 @@ export default function ContactPage() {
               <h3 style={{ fontSize: '20px', color: '#fff', fontWeight: '700', letterSpacing: '0.5px' }}>24/7 Route Hotlines</h3>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', position: 'relative', zIndex: 2 }}>
-              {[
-                { tag: 'Express', tagColor: '#a78bfa', route: 'Colombo ➜ Jaffna', num: '077 107 5555', bg: 'rgba(139,92,246,0.15)', border: 'rgba(139,92,246,0.3)', iconColor: '#c4b5fd' },
-                { tag: 'Intercity', tagColor: '#60a5fa', route: 'Panadura ⇌ Kandy', num: '077 779 8600', bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)', iconColor: '#93c5fd' },
-                { tag: 'Multi-Route', tagColor: '#10b981', route: 'Makumbura ⇌ Badulla / Colombo ⇌ Passara', num: '076 138 2300', bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)', iconColor: '#6ee7b7' },
-                { tag: 'Charter', tagColor: '#f59e0b', route: 'Special Hires', num: '074 289 3612', bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.3)', iconColor: '#fcd34d' },
-              ].map((item, i) => (
+              {activeRoutes.map((item, i) => (
                 <div key={i} style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '12px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(255,255,255,0.05)' }} className="interactive">
                   <div>
                     <span style={{ fontSize: '11px', color: item.tagColor, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '800' }}>{item.tag}</span>

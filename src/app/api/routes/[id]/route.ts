@@ -73,7 +73,7 @@ export async function PUT(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { id } = await params;
-    const { name, code, startLocation, endLocation, distance, duration, basePrice, publish, stops } = await request.json();
+    const { name, code, startLocation, endLocation, distance, duration, basePrice, publish, stops, type } = await request.json();
 
     if (!name || !code || !startLocation || !endLocation) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -131,6 +131,7 @@ export async function PUT(
         duration: parseInt(duration),
         basePrice: basePrice ? parseFloat(basePrice) : 0,
         status: publish ? 'PUBLISHED' : 'DRAFT',
+        type: type || 'EXPRESS',
         routeStops: {
           deleteMany: {}, // Clear existing stops
           create: stops.map((s: any, idx: number) => ({

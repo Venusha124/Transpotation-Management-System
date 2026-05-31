@@ -41,7 +41,15 @@ function LoginForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Invalid email or password.');
-      router.push(redirectPath);
+      let defaultPath = '/dashboard';
+      if (data.user.role === 'CUSTOMER') {
+        defaultPath = '/dashboard/customer-portal';
+      } else if (data.user.role === 'DRIVER') {
+        defaultPath = '/dashboard/route-runs';
+      } else if (data.user.role === 'CONDUCTOR') {
+        defaultPath = '/dashboard/conductor';
+      }
+      router.push(searchParams.get('redirect') || defaultPath);
       router.refresh();
     } catch (err: any) {
       setError(err.message);

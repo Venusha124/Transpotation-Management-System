@@ -2,9 +2,9 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { verifyTokenNode } from '@/lib/auth';
 import { db } from '@/lib/db';
-import ConductorPOSPageClient from '../../conductor/ConductorPOSPageClient';
+import ConductorPOSPageClient from './ConductorPOSPageClient';
 
-export default async function DashboardConductorPage() {
+export default async function ConductorPOSPage() {
   const cookieStore = await cookies();
   const token = cookieStore.get('token')?.value;
 

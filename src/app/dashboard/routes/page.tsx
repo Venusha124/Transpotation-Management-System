@@ -28,10 +28,27 @@ interface RouteItem {
   duration: number;
   basePrice: number;
   status: string;
+  type: string;
   createdAt: string;
   routeStops: RouteStop[];
   trips?: any[];
 }
+
+const getRouteTypeBadge = (type: string) => {
+  const t = (type || 'EXPRESS').toUpperCase();
+  switch (t) {
+    case 'EXPRESS':
+      return { label: 'EXPRESS', color: '#a78bfa', bg: 'rgba(139,92,246,0.15)', border: 'rgba(139,92,246,0.3)' };
+    case 'INTERCITY':
+      return { label: 'INTERCITY', color: '#60a5fa', bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)' };
+    case 'MULTI_ROUTE':
+      return { label: 'MULTI-ROUTE', color: '#10b981', bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)' };
+    case 'CHARTER':
+      return { label: 'CHARTER', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.3)' };
+    default:
+      return { label: 'EXPRESS', color: '#a78bfa', bg: 'rgba(139,92,246,0.15)', border: 'rgba(139,92,246,0.3)' };
+  }
+};
 
 interface StopRow {
   stopId: string;
@@ -49,7 +66,7 @@ export default function RoutesPage() {
   // Create/Edit Route Form
   const [showRouteForm, setShowRouteForm] = useState(false);
   const [editingRoute, setEditingRoute] = useState<RouteItem | null>(null);
-  const [routeForm, setRouteForm] = useState({ name: '', code: '', startLocation: '', endLocation: '', distance: '', duration: '', basePrice: '', publish: false });
+  const [routeForm, setRouteForm] = useState({ name: '', code: '', startLocation: '', endLocation: '', distance: '', duration: '', basePrice: '', publish: false, type: 'EXPRESS' });
   const [selectedStops, setSelectedStops] = useState<StopRow[]>([{ stopId: '', arrivalOffset: '0' }, { stopId: '', arrivalOffset: '0' }]);
 
   // Create/Edit Stop Form
@@ -124,7 +141,7 @@ export default function RoutesPage() {
     if (!res.ok) { setError(data.error); return; }
     
     setSuccess(editingRoute ? `Route "${data.route.name}" updated successfully!` : `Route "${data.route.name}" created successfully!`);
-    setRouteForm({ name: '', code: '', startLocation: '', endLocation: '', distance: '', duration: '', basePrice: '', publish: false });
+    setRouteForm({ name: '', code: '', startLocation: '', endLocation: '', distance: '', duration: '', basePrice: '', publish: false, type: 'EXPRESS' });
     setSelectedStops([{ stopId: '', arrivalOffset: '0' }, { stopId: '', arrivalOffset: '0' }]);
     setShowRouteForm(false);
     setEditingRoute(null);
@@ -142,6 +159,7 @@ export default function RoutesPage() {
       duration: route.duration.toString(),
       basePrice: route.basePrice.toString(),
       publish: route.status === 'PUBLISHED',
+      type: route.type || 'EXPRESS',
     });
     const stops = route.routeStops.map(rs => ({
       stopId: rs.stop.id,
@@ -198,7 +216,7 @@ export default function RoutesPage() {
           </button>
           <button onClick={() => { 
             setEditingRoute(null);
-            setRouteForm({ name: '', code: '', startLocation: '', endLocation: '', distance: '', duration: '', basePrice: '', publish: false });
+            setRouteForm({ name: '', code: '', startLocation: '', endLocation: '', distance: '', duration: '', basePrice: '', publish: false, type: 'EXPRESS' });
             setSelectedStops([{ stopId: '', arrivalOffset: '0' }, { stopId: '', arrivalOffset: '0' }]);
             setShowRouteForm(!showRouteForm); 
             setShowStopForm(false); 
@@ -299,6 +317,15 @@ export default function RoutesPage() {
                   <label className="form-label">Base Price (LKR)</label>
                   <input className="glass-input" type="number" step="0.01" min="0" value={routeForm.basePrice} onChange={e => setRouteForm(p => ({ ...p, basePrice: e.target.value }))} placeholder="e.g. 450" />
                 </div>
+                <div>
+                  <label className="form-label">Route Type *</label>
+                  <select className="glass-input" value={routeForm.type} onChange={e => setRouteForm(p => ({ ...p, type: e.target.value }))} required>
+                    <option value="EXPRESS">EXPRESS</option>
+                    <option value="INTERCITY">INTERCITY</option>
+                    <option value="MULTI_ROUTE">MULTI-ROUTE</option>
+                    <option value="CHARTER">CHARTER</option>
+                  </select>
+                </div>
               </div>
 
               {/* Stops Builder */}
@@ -370,6 +397,23 @@ export default function RoutesPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  {(() => {
+                    const badge = getRouteTypeBadge(route.type);
+                    return (
+                      <span style={{ 
+                        padding: '4px 12px', 
+                        borderRadius: '20px', 
+                        fontSize: '11px', 
+                        fontWeight: 700, 
+                        letterSpacing: '0.5px',
+                        background: badge.bg, 
+                        color: badge.color, 
+                        border: `1px solid ${badge.border}` 
+                      }}>
+                        {badge.label}
+                      </span>
+                    );
+                  })()}
                   <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, background: route.status === 'PUBLISHED' ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)', color: route.status === 'PUBLISHED' ? '#10b981' : '#f59e0b', border: `1px solid ${route.status === 'PUBLISHED' ? '#10b981' : '#f59e0b'}40` }}>
                     {route.status}
                   </span>

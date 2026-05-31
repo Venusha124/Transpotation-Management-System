@@ -62,7 +62,7 @@ export default function DashboardLayoutClient({ children, user }: DashboardLayou
   };
 
   const navigationItems = [
-    { name: 'Dashboard Overview', path: '/dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'DRIVER', 'CUSTOMER', 'ACCOUNTANT'] },
+    { name: 'Dashboard Overview', path: '/dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'DRIVER', 'ACCOUNTANT'] },
     { name: 'Bus Fleet', path: '/dashboard/vehicles', icon: Bus, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER'] },
     { name: 'Drivers', path: '/dashboard/drivers', icon: Users, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER'] },
     { name: 'Route Plans', path: '/dashboard/routes', icon: Route, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER'] },
@@ -82,6 +82,40 @@ export default function DashboardLayoutClient({ children, user }: DashboardLayou
     { name: 'System Admin Panel', path: '/dashboard/admin', icon: Settings, roles: ['ADMIN'] },
   ];
 
+  // Role-based page access control
+  const currentNavItem = navigationItems.find(item => {
+    if (item.path === '/dashboard') {
+      return pathname === '/dashboard';
+    }
+    return pathname.startsWith(item.path);
+  });
+  const isAllowed = !currentNavItem || currentNavItem.roles.includes(user.role);
+
+  const getDefaultRedirect = (role: string): string => {
+    if (role === 'CUSTOMER') return '/dashboard/customer-portal';
+    if (role === 'DRIVER') return '/dashboard/route-runs';
+    if (role === 'CONDUCTOR') return '/dashboard/conductor';
+    return '/dashboard';
+  };
+
+  useEffect(() => {
+    if (!isAllowed) {
+      router.push(getDefaultRedirect(user.role));
+    }
+  }, [isAllowed, user.role, router]);
+
+  if (!isAllowed) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#0a1228', color: '#fff' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }}></div>
+          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>Loading authorized portal...</p>
+          <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </div>
+    );
+  }
+  
   const activeNavItems = navigationItems.filter(item => item.roles.includes(user.role));
 
   return (

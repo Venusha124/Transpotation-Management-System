@@ -7,9 +7,15 @@ export default function AboutPage() {
   return (
     <div className="landing-wrapper">
       <Navbar />
-      <header className="hero-section" style={{ minHeight: '30vh', padding: '100px 20px 0px' }}>
+      <header className="hero-section" style={{ minHeight: '35vh', padding: '120px 20px 20px' }}>
         <div className="hero-content fade-in-up">
           <div className="badge-pill">The Ascendia Story</div>
+          <h1 className="hero-title">
+            About <span className="text-gradient">Us</span>
+          </h1>
+          <p className="hero-subtitle">
+            A leading people mobility company in Sri Lanka, dedicated to delivering reliable, safe, and innovative travel solutions.
+          </p>
         </div>
       </header>
       

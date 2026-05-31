@@ -21,7 +21,12 @@ export async function POST(request: Request) {
 
     const ticketId = ticketPart.replace('TICKET:', '').trim();
 
-    const booking = await db.booking.findUnique({ where: { id: ticketId } });
+    const booking = await db.booking.findUnique({ 
+      where: { id: ticketId },
+      include: {
+        payments: true
+      }
+    });
 
     if (!booking) {
       return NextResponse.json({ error: 'Ticket not found in the database.' }, { status: 404 });
@@ -69,7 +74,7 @@ export async function POST(request: Request) {
         seats: booking.seatNumber || 'Unassigned',
         pickup: booking.pickup,
         destination: booking.destination,
-        price: (booking.weight || 1) * 500
+        price: booking.payments[0]?.amount || (booking.weight || 1) * (booking.deliveryType === 'Express' ? 1500 : 800)
       }
     });
 

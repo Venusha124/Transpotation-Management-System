@@ -84,7 +84,7 @@ export default function AdminPanelPage() {
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
-        
+
         {/* User Gating Section */}
         <div className="glass-panel" style={{ padding: '24px' }}>
           <h3 style={{ fontSize: '18px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -98,8 +98,8 @@ export default function AdminPanelPage() {
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{u.email}</span>
                 </div>
                 <div style={{ flexShrink: 0 }}>
-                  <select 
-                    className="form-input" 
+                  <select
+                    className="form-input"
                     style={{ fontSize: '11px', padding: '6px 12px', width: 'auto', background: 'rgba(0,0,0,0.3)' }}
                     value={u.role}
                     onChange={(e) => handleRoleChange(u.id, e.target.value)}
@@ -140,7 +140,7 @@ export default function AdminPanelPage() {
             )}
           </div>
         </div>
-        
+
       </div>
     </div>
   );

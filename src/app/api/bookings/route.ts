@@ -18,11 +18,19 @@ export async function GET(request: Request) {
 
     let list;
     if (tripId) {
-      list = await db.booking.findMany({ where: { tripId } });
+      list = await db.booking.findMany({
+        where: { tripId },
+        orderBy: { createdAt: 'desc' }
+      });
     } else if (payload.role === 'CUSTOMER') {
-      list = await db.booking.findMany({ where: { customerId: payload.id } });
+      list = await db.booking.findMany({
+        where: { customerId: payload.id },
+        orderBy: { createdAt: 'desc' }
+      });
     } else {
-      list = await db.booking.findMany();
+      list = await db.booking.findMany({
+        orderBy: { createdAt: 'desc' }
+      });
     }
 
     return NextResponse.json({ success: true, bookings: list });

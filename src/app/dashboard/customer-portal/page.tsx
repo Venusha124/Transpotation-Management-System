@@ -370,7 +370,7 @@ export default function PassengerAppPage() {
                     <div className="icon-badge"><Ticket size={16} color="#60a5fa" /></div>
                     <div>
                       <h4 style={{fontSize: '13px'}}>{booking.pickup.split(',')[0]} ➜ {booking.destination.split(',')[0]}</h4>
-                      <p>{booking.scheduledTime}</p>
+                      <p>Ref: BOOK-{booking.id.toUpperCase().slice(0, 8)} | {booking.scheduledTime}</p>
                     </div>
                   </div>
                   <div className="item-right">
@@ -386,7 +386,6 @@ export default function PassengerAppPage() {
   );
 
   const renderBook = () => {
-    const { t } = useLanguage();
     return (
     <div className="book-view fade-in-up">
       <div className="view-header">
@@ -464,7 +463,6 @@ export default function PassengerAppPage() {
   )};
 
   const renderTrack = () => {
-    const { t } = useLanguage();
     return (
     <div className="track-view fade-in-up">
       <div className="view-header">
@@ -524,7 +522,6 @@ export default function PassengerAppPage() {
   )};
 
   const renderTickets = () => {
-    const { t } = useLanguage();
     return (
     <div className="history-view fade-in-up">
       <div className="view-header">
@@ -546,7 +543,7 @@ export default function PassengerAppPage() {
                   <h4 style={{fontSize:'13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
                     {booking.pickup.split(',')[0]} ➜ {booking.destination.split(',')[0]}
                   </h4>
-                  <p>{booking.scheduledTime} | {booking.deliveryType}</p>
+                  <p>Ref: BOOK-{booking.id.toUpperCase().slice(0, 8)} | {booking.scheduledTime} | {booking.deliveryType}</p>
                 </div>
               </div>
               <div className="item-right" style={{width: '40%'}}>
@@ -691,14 +688,10 @@ export default function PassengerAppPage() {
 
       {/* MOBILE NAV */}
       <div className="bottom-nav-pill">
-        {(() => { const { t } = useLanguage(); return (
-          <>
-            <button className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}><Home size={22} /><span>{t('nav.home')}</span></button>
-            <button className={`nav-item ${activeTab === 'book' ? 'active' : ''}`} onClick={() => setActiveTab('book')}><Ticket size={22} /><span>{t('nav.book')}</span></button>
-            <button className={`nav-item ${activeTab === 'track' ? 'active' : ''}`} onClick={() => setActiveTab('track')}><MapPin size={22} /><span>{t('nav.track')}</span></button>
-            <button className={`nav-item ${activeTab === 'tickets' ? 'active' : ''}`} onClick={() => setActiveTab('tickets')}><FolderClock size={22} /><span>{t('nav.tickets')}</span></button>
-          </>
-        );})()}
+        <button className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}><Home size={22} /><span>{t('nav.home')}</span></button>
+        <button className={`nav-item ${activeTab === 'book' ? 'active' : ''}`} onClick={() => setActiveTab('book')}><Ticket size={22} /><span>{t('nav.book')}</span></button>
+        <button className={`nav-item ${activeTab === 'track' ? 'active' : ''}`} onClick={() => setActiveTab('track')}><MapPin size={22} /><span>{t('nav.track')}</span></button>
+        <button className={`nav-item ${activeTab === 'tickets' ? 'active' : ''}`} onClick={() => setActiveTab('tickets')}><FolderClock size={22} /><span>{t('nav.tickets')}</span></button>
       </div>
     </div>
   );

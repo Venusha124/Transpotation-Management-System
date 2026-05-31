@@ -207,6 +207,7 @@ model Route {
   distance      Float       // km
   duration      Int         // minutes
   status        String      @default("DRAFT") // DRAFT | PUBLISHED
+  type          String      @default("EXPRESS") // EXPRESS | INTERCITY | MULTI_ROUTE | CHARTER
   basePrice     Float       @default(0)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
