@@ -56,23 +56,47 @@ export default function TripsPage() {
 
   const fetchTripsData = async () => {
     try {
-      const resTrips = await fetch('/api/trips');
-      if (resTrips.ok) {
-        const data = await resTrips.json();
-        setTrips(data.trips);
-      }
+      let currentUser = null;
+      try {
+        const resMe = await fetch('/api/auth/me');
+        if (resMe.ok) {
+          const meData = await resMe.json();
+          currentUser = meData.user;
+        }
+      } catch (e) {}
 
-      // Fetch vehicles and drivers to check availability
-      const resVehicles = await fetch('/api/vehicles');
-      if (resVehicles.ok) {
-        const data = await resVehicles.json();
-        setVehicles(data.vehicles);
-      }
+      let currentDriverId: string | null = null;
+      let driversList: any[] = [];
 
       const resDrivers = await fetch('/api/drivers');
       if (resDrivers.ok) {
         const data = await resDrivers.json();
-        setDrivers(data.drivers);
+        driversList = data.drivers || [];
+        setDrivers(driversList);
+        
+        if (currentUser && currentUser.role === 'DRIVER') {
+          const matchedDriver = driversList.find((d: any) => d.userId === currentUser.id);
+          if (matchedDriver) {
+            currentDriverId = matchedDriver.id;
+          }
+        }
+      }
+
+      const resTrips = await fetch('/api/trips');
+      if (resTrips.ok) {
+        const data = await resTrips.json();
+        let fetchedTrips = data.trips || [];
+        if (currentUser && currentUser.role === 'DRIVER') {
+          fetchedTrips = fetchedTrips.filter((t: any) => t.driverId === currentDriverId);
+        }
+        setTrips(fetchedTrips);
+      }
+
+      // Fetch vehicles to check availability
+      const resVehicles = await fetch('/api/vehicles');
+      if (resVehicles.ok) {
+        const data = await resVehicles.json();
+        setVehicles(data.vehicles);
       }
 
       // Fetch published routes

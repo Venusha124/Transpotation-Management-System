@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { verifyTokenNode } from '@/lib/auth';
 import { db } from '@/lib/db';
-import ConductorPOSPageClient from '../../conductor/ConductorPOSPageClient';
+import ConductorPOSPageClient from './ConductorPOSPageClient';
 
 export default async function DashboardConductorPage() {
   const cookieStore = await cookies();

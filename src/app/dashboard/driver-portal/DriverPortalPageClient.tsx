@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Bell, MapPin, Play, CheckCircle2, AlertOctagon, Bus, Clock, User, LogOut, CheckCircle, RefreshCw, Eye, Power, LayoutDashboard } from 'lucide-react';
+import { Bell, MapPin, Play, CheckCircle2, AlertOctagon, Bus, Clock, User, LogOut, CheckCircle, RefreshCw, Eye, Power, LayoutDashboard, Home, Route, History } from 'lucide-react';
 
 interface Trip {
   id: string;
@@ -47,6 +47,10 @@ export default function DriverPortalPageClient({ initialUser }: DriverPortalPage
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUpdatingAttendance, setIsUpdatingAttendance] = useState(false);
+  const [activeTab, setActiveTab] = useState<'home' | 'runs' | 'history'>('home');
+  const [delayModalConfig, setDelayModalConfig] = useState<{tripId: string, currentEta: string} | null>(null);
+  const [delayReason, setDelayReason] = useState('');
+  const [delayNewEta, setDelayNewEta] = useState('');
 
   const fetchDriverData = async () => {
     try {
@@ -116,14 +120,16 @@ export default function DriverPortalPageClient({ initialUser }: DriverPortalPage
     }
   };
 
-  const handleReportDelay = (tripId: string, currentEta: string) => {
-    const delayReason = prompt("Enter reason for delay (e.g. Traffic Congestion, Road Work):");
-    if (!delayReason) return;
-    
-    const newEta = prompt(`Enter new estimated journey duration (Current: ${currentEta}):`, `${currentEta} + 30 mins`);
-    if (!newEta) return;
+  const handleOpenDelayModal = (tripId: string, currentEta: string) => {
+    setDelayModalConfig({ tripId, currentEta });
+    setDelayReason('');
+    setDelayNewEta(`${currentEta} + 30 mins`);
+  };
 
-    handleUpdateTripStatus(tripId, 'IN_PROGRESS', { delayReason, eta: newEta });
+  const submitDelayReport = () => {
+    if (!delayModalConfig || !delayReason || !delayNewEta) return;
+    handleUpdateTripStatus(delayModalConfig.tripId, 'IN_PROGRESS', { delayReason, eta: delayNewEta });
+    setDelayModalConfig(null);
   };
 
   const handleLogout = async () => {
@@ -226,8 +232,52 @@ export default function DriverPortalPageClient({ initialUser }: DriverPortalPage
       {/* Main Content Area */}
       <div className="body-content">
         
-        {/* ── SECTION 1: ACTIVE RUN ── */}
-        <div className="section-title">ACTIVE RUN</div>
+        {/* ── SECTION 0: ATTENDANCE (HOME TAB) ── */}
+        {activeTab === 'home' && (
+          <>
+            <div className="section-title">ATTENDANCE</div>
+        <div className="glass-panel" style={{ padding: '24px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderLeft: driverProfile.attendanceStatus === 'Present' ? '4px solid #10b981' : '4px solid #f87171' }}>
+          <div>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '700' }}>Shift Status</h3>
+            <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              Current State: 
+              <span style={{ 
+                color: driverProfile.attendanceStatus === 'Present' ? '#10b981' : '#f87171',
+                fontWeight: 'bold',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <span className="dot" style={{ background: driverProfile.attendanceStatus === 'Present' ? '#10b981' : '#f87171', width: '8px', height: '8px', borderRadius: '50%', display: 'inline-block', boxShadow: `0 0 8px ${driverProfile.attendanceStatus === 'Present' ? '#10b981' : '#f87171'}` }}></span>
+                {driverProfile.attendanceStatus === 'Present' ? 'On Duty' : 'Off Duty'}
+              </span>
+            </p>
+          </div>
+          <button 
+            onClick={handleToggleAttendance}
+            disabled={isUpdatingAttendance}
+            className={`interactive ${driverProfile.attendanceStatus === 'Present' ? 'btn-secondary-mobile' : 'btn-primary-mobile'}`}
+            style={{ 
+              width: 'auto', 
+              padding: '12px 24px', 
+              borderRadius: '12px',
+              background: driverProfile.attendanceStatus === 'Present' ? 'rgba(239, 68, 68, 0.15)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              borderColor: driverProfile.attendanceStatus === 'Present' ? 'rgba(239, 68, 68, 0.4)' : 'transparent',
+              color: driverProfile.attendanceStatus === 'Present' ? '#f87171' : '#fff',
+              boxShadow: driverProfile.attendanceStatus === 'Present' ? 'none' : '0 4px 12px rgba(16, 185, 129, 0.3)'
+            }}
+          >
+            <Power size={18} />
+            {driverProfile.attendanceStatus === 'Present' ? 'Clock Out' : 'Clock In'}
+          </button>
+        </div>
+        </>
+        )}
+        
+        {/* ── SECTION 1: ACTIVE RUN (RUNS TAB) ── */}
+        {activeTab === 'runs' && (
+          <>
+            <div className="section-title">ACTIVE RUN</div>
         {activeTrip ? (
           <div className="glass-panel" style={{ padding: '24px', marginBottom: '24px', borderLeft: '4px solid #38bdf8' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'center' }}>
@@ -241,6 +291,12 @@ export default function DriverPortalPageClient({ initialUser }: DriverPortalPage
             
             <div className="glass-panel-inner" style={{ margin: '16px 0', padding: '12px' }}>
               <p className="text-sm" style={{ marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <MapPin size={14} className="text-blue" /> Locations: <strong>{activeTrip.pickup} ➜ {activeTrip.destination}</strong>
+              </p>
+              <p className="text-sm" style={{ marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <User size={14} className="text-blue" /> Duty: <strong>{activeTrip.weight} Pax | {activeTrip.cargoType}</strong>
+              </p>
+              <p className="text-sm" style={{ marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Bus size={14} className="text-blue" /> Bus Number: <strong>{activeTrip.vehicle?.number || 'WP-NB-4321'}</strong>
               </p>
               <p className="text-sm" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -250,9 +306,9 @@ export default function DriverPortalPageClient({ initialUser }: DriverPortalPage
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
               <button 
-                onClick={() => handleReportDelay(activeTrip.id, activeTrip.eta)} 
+                onClick={() => handleOpenDelayModal(activeTrip.id, activeTrip.eta)} 
                 className="glass-btn interactive" 
-                style={{ flex: 1, padding: '14px', borderRadius: '12px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                style={{ flex: 1, padding: '14px', borderRadius: '12px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', border: '1px solid rgba(245, 158, 11, 0.4)', color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)' }}
               >
                 ⚠️ Report Delay
               </button>
@@ -290,8 +346,11 @@ export default function DriverPortalPageClient({ initialUser }: DriverPortalPage
                 <h4 style={{ fontSize: '14px', fontWeight: '800', margin: '0 0 6px 0' }}>
                   {trip.pickup.split(',')[0]} ➜ {trip.destination.split(',')[0]}
                 </h4>
-                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)', margin: '0 0 12px 0' }}>
-                  Bus: {trip.vehicle?.number || 'WP-NB-4321'} | Pax Count: {trip.weight}
+                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.7)', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <MapPin size={12} className="text-blue" /> {trip.pickup} to {trip.destination}
+                </p>
+                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)', margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <User size={12} className="text-green" /> Duty: {trip.weight} Pax ({trip.cargoType}) | Bus: {trip.vehicle?.number || 'WP-NB-4321'}
                 </p>
                 <button 
                   onClick={() => handleUpdateTripStatus(trip.id, 'IN_PROGRESS')} 
@@ -311,9 +370,13 @@ export default function DriverPortalPageClient({ initialUser }: DriverPortalPage
             ))}
           </div>
         )}
+        </>
+        )}
 
-        {/* ── SECTION 3: COMPLETED HISTORY ── */}
-        <div className="section-title">COMPLETED HISTORY</div>
+        {/* ── SECTION 3: COMPLETED HISTORY (HISTORY TAB) ── */}
+        {activeTab === 'history' && (
+          <>
+            <div className="section-title">COMPLETED HISTORY</div>
         {completedTrips.length === 0 ? (
           <div className="empty-state-card glass-panel" style={{ padding: '24px' }}>
             <p className="empty-text">No runs completed yet.</p>
@@ -338,14 +401,76 @@ export default function DriverPortalPageClient({ initialUser }: DriverPortalPage
             ))}
           </div>
         )}
+          </>
+        )}
 
       </div>
+      
+      {/* Bottom Navigation */}
+      <div className="bottom-nav-pill">
+        <button className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={() => setActiveTab('home')}>
+          <Home size={22} /><span>Home</span>
+        </button>
+        <button className={`nav-item ${activeTab === 'runs' ? 'active' : ''}`} onClick={() => setActiveTab('runs')}>
+          <Route size={22} /><span>Runs</span>
+        </button>
+        <button className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
+          <History size={22} /><span>History</span>
+        </button>
+      </div>
+
+      {/* Delay Report Modal */}
+      {delayModalConfig && (
+        <div className="print-modal-overlay fade-in-up">
+          <div className="glass-panel" style={{ maxWidth: '360px', width: '90%', margin: '0 auto', padding: '24px', textAlign: 'left', borderTop: '4px solid #f59e0b' }}>
+            <h3 style={{ fontSize: '18px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: '#f59e0b' }}>
+              <AlertOctagon size={20} /> Report Delay
+            </h3>
+            
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', color: 'rgba(255,255,255,0.7)', marginBottom: '8px', fontWeight: 'bold' }}>Reason for delay</label>
+              <input 
+                type="text" 
+                className="glass-input" 
+                placeholder="e.g. Traffic Congestion, Road Work" 
+                value={delayReason}
+                onChange={(e) => setDelayReason(e.target.value)}
+              />
+            </div>
+            
+            <div className="form-group" style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontSize: '13px', color: 'rgba(255,255,255,0.7)', marginBottom: '8px', fontWeight: 'bold' }}>New ETA (Current: {delayModalConfig.currentEta})</label>
+              <input 
+                type="text" 
+                className="glass-input" 
+                value={delayNewEta}
+                onChange={(e) => setDelayNewEta(e.target.value)}
+              />
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button className="btn-secondary-mobile interactive" style={{ flex: 1, padding: '12px' }} onClick={() => setDelayModalConfig(null)}>
+                Cancel
+              </button>
+              <button 
+                className="btn-primary-mobile interactive" 
+                style={{ flex: 1, padding: '12px', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)' }} 
+                onClick={submitDelayReport}
+                disabled={!delayReason}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
 
 const globalStyles = `
-  .mobile-app-wrapper { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; display: flex; flex-direction: column; overflow: hidden; font-family: 'Inter', sans-serif; color: #f8fafc; background: linear-gradient(135deg, rgba(2, 6, 23, 1) 0%, rgba(15, 23, 42, 1) 100%); }
+  .mobile-app-wrapper { display: flex; flex-direction: column; overflow: hidden; font-family: 'Inter', sans-serif; color: #f8fafc; background: transparent; }
   .fade-in-up { animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
   @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -409,4 +534,13 @@ const globalStyles = `
   .btn-secondary-mobile { padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 600; width: 100%; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); color: #fff; }
   .spin-anim { animation: spin 1s linear infinite; }
   @keyframes spin { 100% { transform: rotate(360deg); } }
+
+  /* Bottom Navigation Tab Bar */
+  .bottom-nav-pill { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 40px; display: flex; padding: 6px 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); z-index: 100; gap: 8px; }
+  .nav-item { background: transparent; border: none; color: rgba(255,255,255,0.5); width: 64px; height: 56px; border-radius: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s; cursor: pointer; }
+  .nav-item span { font-size: 10px; font-weight: 600; opacity: 0; transform: translateY(4px); transition: all 0.2s; }
+  .nav-item.active { background: rgba(56, 189, 248, 0.15); color: #38bdf8; width: 80px; }
+  .nav-item.active span { opacity: 1; transform: translateY(0); }
+  
+  .print-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999; }
 `;

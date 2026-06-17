@@ -27,10 +27,35 @@ export default function TrackingPage() {
 
   const fetchTrips = async () => {
     try {
+      let currentUser = null;
+      try {
+        const resMe = await fetch('/api/auth/me');
+        if (resMe.ok) {
+          const meData = await resMe.json();
+          currentUser = meData.user;
+        }
+      } catch (e) {}
+
+      let currentDriverId: string | null = null;
+      if (currentUser && currentUser.role === 'DRIVER') {
+        const resDrivers = await fetch('/api/drivers');
+        if (resDrivers.ok) {
+          const driversData = await resDrivers.json();
+          const matchedDriver = driversData.drivers?.find((d: any) => d.userId === currentUser.id);
+          if (matchedDriver) {
+            currentDriverId = matchedDriver.id;
+          }
+        }
+      }
+
       const res = await fetch('/api/trips');
       if (res.ok) {
         const data = await res.json();
-        setTrips(data.trips.filter((t: any) => t.status === 'IN_PROGRESS' || t.status === 'ASSIGNED'));
+        let fetchedTrips = data.trips.filter((t: any) => t.status === 'IN_PROGRESS' || t.status === 'ASSIGNED');
+        if (currentUser && currentUser.role === 'DRIVER') {
+          fetchedTrips = fetchedTrips.filter((t: any) => t.driverId === currentDriverId);
+        }
+        setTrips(fetchedTrips);
       }
     } catch (err) { console.error(err); }
   };

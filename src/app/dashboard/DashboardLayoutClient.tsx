@@ -78,6 +78,7 @@ export default function DashboardLayoutClient({ children, user }: DashboardLayou
     { name: 'Fleet Heatmap', path: '/dashboard/fleet-utilization', icon: TrendingUp, roles: ['ADMIN', 'TRANSPORT_MANAGER'] },
     { name: 'Disputes & Refunds', path: '/dashboard/disputes', icon: AlertCircle, roles: ['ADMIN', 'TRANSPORT_MANAGER'] },
     { name: 'Conductor POS', path: '/dashboard/conductor', icon: QrCode, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'CONDUCTOR'] },
+    { name: 'Driver Portal', path: '/dashboard/driver-portal', icon: Bus, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'DRIVER'] },
     { name: 'Passenger Portal', path: '/dashboard/customer-portal', icon: UserIcon, roles: ['CUSTOMER'] },
     { name: 'System Admin Panel', path: '/dashboard/admin', icon: Settings, roles: ['ADMIN'] },
   ];
@@ -93,7 +94,7 @@ export default function DashboardLayoutClient({ children, user }: DashboardLayou
 
   const getDefaultRedirect = (role: string): string => {
     if (role === 'CUSTOMER') return '/dashboard/customer-portal';
-    if (role === 'DRIVER') return '/driver';
+    if (role === 'DRIVER') return '/dashboard/driver-portal';
     if (role === 'CONDUCTOR') return '/dashboard/conductor';
     return '/dashboard';
   };
@@ -117,6 +118,16 @@ export default function DashboardLayoutClient({ children, user }: DashboardLayou
   }
   
   const activeNavItems = navigationItems.filter(item => item.roles.includes(user.role));
+
+  if (pathname.startsWith('/dashboard/conductor') || pathname.startsWith('/dashboard/driver-portal') || pathname.startsWith('/dashboard/customer-portal')) {
+    return (
+      <div className={styles.layoutContainer}>
+        <main className={styles.content} style={{ padding: 0, margin: 0, overflow: 'hidden' }}>
+          {children}
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.layoutContainer}>

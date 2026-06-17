@@ -42,11 +42,11 @@ export async function proxy(request: NextRequest) {
 
     // 2. Driver Access Gating
     if (role === 'DRIVER') {
-      // Drivers can only view trips, live tracking, and notifications
-      const allowedPaths = ['/dashboard/trips', '/dashboard/tracking', '/dashboard/notifications'];
+      // Drivers can only view route runs, driver portal, live tracking, and notifications
+      const allowedPaths = ['/dashboard/route-runs', '/dashboard/driver-portal', '/dashboard/tracking', '/dashboard/notifications'];
       const isAllowed = allowedPaths.some(path => pathname.startsWith(path)) || pathname === '/dashboard';
       if (!isAllowed) {
-        return NextResponse.redirect(new URL('/dashboard/trips', request.url));
+        return NextResponse.redirect(new URL('/dashboard/driver-portal', request.url));
       }
     }
 
@@ -66,7 +66,7 @@ export async function proxy(request: NextRequest) {
       const disallowedPaths = ['/dashboard/admin', '/dashboard/billing'];
       const isDisallowed = disallowedPaths.some(path => pathname.startsWith(path));
       if (isDisallowed) {
-        return NextResponse.redirect(new URL('/dashboard/trips', request.url));
+        return NextResponse.redirect(new URL('/dashboard/route-runs', request.url));
       }
     }
 
