@@ -7,8 +7,8 @@ export default function RootLayout() {
       <StatusBar style="light" />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0f172a' } }}>
         <Stack.Screen name="index" options={{ title: 'Login' }} />
-        <Stack.Screen name="driver" options={{ title: 'Driver Portal' }} />
-        <Stack.Screen name="conductor" options={{ title: 'Conductor POS' }} />
+        <Stack.Screen name="driver/index" options={{ title: 'Driver Portal' }} />
+        <Stack.Screen name="conductor/index" options={{ title: 'Conductor POS' }} />
       </Stack>
     </>
   );

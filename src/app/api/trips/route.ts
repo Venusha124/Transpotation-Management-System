@@ -15,6 +15,9 @@ export async function GET() {
         driver: {
           select: { id: true, name: true },
         },
+        bookings: {
+          include: { customer: { select: { name: true } } }
+        }
       },
     });
     return NextResponse.json({ success: true, trips: list });

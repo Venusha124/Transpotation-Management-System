@@ -7,6 +7,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { GlassCard, GlassButton, GlassInput, globalStyles } from '../../components/ui';
 import { BASE_URL } from '../../config';
 
@@ -18,11 +20,6 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
-
-// Icons
-const IconBus = () => <Text style={{color: '#fff', fontSize: 16}}>🚌</Text>;
-const IconWarning = () => <Text style={{color: '#fff', fontSize: 16}}>⚠️</Text>;
-const IconCamera = () => <Text style={{color: '#fff', fontSize: 16}}>📷</Text>;
 
 export default function DriverPortal() {
   const [driverProfile, setDriverProfile] = useState<any>(null);
@@ -104,8 +101,13 @@ export default function DriverPortal() {
         // Not granting push is okay, we just won't have tokens
         return;
       }
-      token = (await Notifications.getExpoPushTokenAsync({ projectId: 'your-project-id' })).data;
-      setExpoPushToken(token);
+      try {
+        token = (await Notifications.getExpoPushTokenAsync({ projectId: '00000000-0000-0000-0000-000000000000' })).data;
+        setExpoPushToken(token);
+      } catch (error) {
+        console.warn("Could not fetch Expo Push Token (Requires EAS projectId). Using mock token.");
+        setExpoPushToken('Mock-Expo-Push-Token-123');
+      }
       // Here you would normally POST this token to your Next.js backend to save against the driver
     }
   }
@@ -154,7 +156,24 @@ export default function DriverPortal() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ attendanceStatus: newStatus, availability: newStatus === 'Present' }),
       });
-      if (res.ok) setDriverProfile({ ...driverProfile, attendanceStatus: newStatus });
+      if (res.ok) {
+        setDriverProfile({ ...driverProfile, attendanceStatus: newStatus });
+
+        // Trigger Local Notification
+        const now = new Date();
+        const dateStr = now.toLocaleDateString();
+        const timeStr = now.toLocaleTimeString();
+        const locStr = location ? `Lat: ${location.coords.latitude.toFixed(3)}, Lng: ${location.coords.longitude.toFixed(3)}` : 'Unknown Location';
+        
+        await Notifications.scheduleNotificationAsync({
+          content: { 
+            title: newStatus === 'Present' ? "🟢 Clocked In Successfully" : "🔴 Clocked Out Successfully", 
+            body: `Date & Time: ${dateStr} at ${timeStr}\nLocation: ${locStr}`,
+            sound: true 
+          },
+          trigger: null,
+        });
+      }
     } catch (err) {
       Alert.alert('Error', 'Failed to update attendance');
     }
@@ -204,16 +223,16 @@ export default function DriverPortal() {
 
   if (loading) {
     return (
-      <View style={[globalStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <LinearGradient colors={['#0f172a', '#1e1b4b']} style={[globalStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#38bdf8" />
         <Text style={{ color: '#fff', marginTop: 10 }}>Loading Profile...</Text>
-      </View>
+      </LinearGradient>
     );
   }
 
   if (!driverProfile) {
     return (
-      <View style={[globalStyles.container, { justifyContent: 'center' }]}>
+      <LinearGradient colors={['#0f172a', '#1e1b4b']} style={[globalStyles.container, { justifyContent: 'center' }]}>
         <GlassCard>
           <Text style={styles.sectionTitle}>Profile Not Linked</Text>
           <GlassButton title="Log Out" onPress={handleLogout} variant="secondary" />
@@ -236,7 +255,7 @@ export default function DriverPortal() {
   const totalEarnings = baseSalary + totalBonus;
 
   return (
-    <View style={globalStyles.container}>
+    <LinearGradient colors={['#0f172a', '#1e1b4b']} style={globalStyles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -334,7 +353,7 @@ export default function DriverPortal() {
                     <Marker coordinate={KANDY} title={activeTrip.destination} pinColor="red" />
                     {location && (
                       <Marker coordinate={{ latitude: location.coords.latitude, longitude: location.coords.longitude }} title="Bus Location">
-                        <View style={styles.busMarker}><IconBus /></View>
+                        <View style={styles.busMarker}><Ionicons name="bus" size={20} color="#fff" /></View>
                       </Marker>
                     )}
                     <Polyline 
@@ -347,7 +366,7 @@ export default function DriverPortal() {
                 
                 <View style={{ padding: 20 }}>
                   <Text style={styles.runTitle}>{activeTrip.pickup} ➜ {activeTrip.destination}</Text>
-                  <Text style={styles.runDetail}><IconBus /> {activeTrip.vehicle?.number || 'Bus'}</Text>
+                  <Text style={styles.runDetail}><Ionicons name="bus-outline" size={14} color="rgba(255,255,255,0.7)"/> {activeTrip.vehicle?.number || 'Bus'}</Text>
                   <Text style={styles.runDetail}>Pax: {activeTrip.weight} | ETA: {activeTrip.eta}</Text>
                   
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 15 }}>
@@ -482,7 +501,7 @@ export default function DriverPortal() {
               </View>
             ) : (
               <TouchableOpacity style={styles.photoBtn} onPress={takeIncidentPhoto}>
-                <IconCamera />
+                <Ionicons name="camera-outline" size={24} color="#38bdf8" />
                 <Text style={{color: '#38bdf8', fontWeight: 'bold', marginLeft: 8}}>Take Photo</Text>
               </TouchableOpacity>
             )}
@@ -501,19 +520,23 @@ export default function DriverPortal() {
       {/* Custom Bottom Tabs */}
       <View style={styles.bottomNav}>
         <TouchableOpacity style={[styles.navItem, activeTab === 'home' && styles.navActive]} onPress={() => setActiveTab('home')}>
-          <Text style={[styles.navText, activeTab === 'home' && styles.navTextActive]}>🏠 Home</Text>
+          <Ionicons name="speedometer-outline" size={24} color={activeTab === 'home' ? '#38bdf8' : 'rgba(255,255,255,0.5)'} />
+          <Text style={[styles.navText, activeTab === 'home' && styles.navTextActive]}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.navItem, activeTab === 'runs' && styles.navActive]} onPress={() => setActiveTab('runs')}>
-          <Text style={[styles.navText, activeTab === 'runs' && styles.navTextActive]}>🛣️ Runs</Text>
+          <Ionicons name="map-outline" size={24} color={activeTab === 'runs' ? '#38bdf8' : 'rgba(255,255,255,0.5)'} />
+          <Text style={[styles.navText, activeTab === 'runs' && styles.navTextActive]}>Runs</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.navItem, activeTab === 'earnings' && styles.navActive]} onPress={() => setActiveTab('earnings')}>
-          <Text style={[styles.navText, activeTab === 'earnings' && styles.navTextActive]}>💰 Pay</Text>
+          <Ionicons name="wallet-outline" size={24} color={activeTab === 'earnings' ? '#38bdf8' : 'rgba(255,255,255,0.5)'} />
+          <Text style={[styles.navText, activeTab === 'earnings' && styles.navTextActive]}>Pay</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.navItem, activeTab === 'history' && styles.navActive]} onPress={() => setActiveTab('history')}>
-          <Text style={[styles.navText, activeTab === 'history' && styles.navTextActive]}>📋 History</Text>
+          <Ionicons name="list-outline" size={24} color={activeTab === 'history' ? '#38bdf8' : 'rgba(255,255,255,0.5)'} />
+          <Text style={[styles.navText, activeTab === 'history' && styles.navTextActive]}>History</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -560,9 +583,9 @@ const styles = StyleSheet.create({
   previewImage: { width: '100%', height: 150, borderRadius: 12 },
   removeImageBtn: { position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.6)', width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
 
-  bottomNav: { position: 'absolute', bottom: 30, left: 20, right: 20, backgroundColor: 'rgba(15, 23, 42, 0.9)', flexDirection: 'row', borderRadius: 30, padding: 8, borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)', justifyContent: 'space-around' },
-  navItem: { paddingVertical: 10, paddingHorizontal: 10, borderRadius: 20 },
+  bottomNav: { position: 'absolute', bottom: 30, left: 20, right: 20, backgroundColor: 'rgba(15, 23, 42, 0.95)', flexDirection: 'row', borderRadius: 30, padding: 8, borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)', justifyContent: 'space-around', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20, elevation: 15 },
+  navItem: { paddingVertical: 10, paddingHorizontal: 15, borderRadius: 20, alignItems: 'center' },
   navActive: { backgroundColor: 'rgba(56, 189, 248, 0.15)' },
-  navText: { color: 'rgba(255,255,255,0.5)', fontWeight: '600', fontSize: 12 },
+  navText: { color: 'rgba(255,255,255,0.5)', fontWeight: '700', fontSize: 10, marginTop: 4 },
   navTextActive: { color: '#38bdf8' }
 });

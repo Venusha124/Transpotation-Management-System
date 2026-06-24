@@ -2,46 +2,60 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as Notifications from 'expo-notifications';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { GlassCard, GlassButton, GlassInput, globalStyles } from '../../components/ui';
 import { BASE_URL } from '../../config';
 
-// Simple text icons
-const IconScan = () => <Text style={{fontSize: 20}}>📷</Text>;
-const IconIssue = () => <Text style={{fontSize: 20}}>➕</Text>;
-const IconManifest = () => <Text style={{fontSize: 20}}>📋</Text>;
-const IconHome = () => <Text style={{fontSize: 20}}>🏠</Text>;
+// Notifications config
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
-export default function ConductorPOS() {
-  const [user, setUser] = useState<any>(null);
+const COMMON_STOPS = ['Kandy', 'Kurunegala', 'Colombo', 'Kadawatha', 'Kegalle', 'Galle', 'Matara'];
+
+export default function ConductorPortal() {
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'home' | 'scanner' | 'cash' | 'history'>('home');
+  const [conductorProfile, setConductorProfile] = useState<any>(null);
   
-  // Shift & Trips
-  const [isShiftActive, setIsShiftActive] = useState(false);
+  // Trip Selection
   const [availableTrips, setAvailableTrips] = useState<any[]>([]);
-  const [shiftDetails, setShiftDetails] = useState({ tripId: '', route: '', fare: 500 });
-  const [scannedPassengers, setScannedPassengers] = useState<any[]>([]);
-  
-  // Navigation
-  const [activeTab, setActiveTab] = useState<'home' | 'scan' | 'issue' | 'history'>('home');
-  
-  // Camera & Scan
+  const [activeTripId, setActiveTripId] = useState<string | null>(null);
+
+  // Scanner State
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
-  const [paxCount, setPaxCount] = useState(1);
-  const [fares, setFares] = useState({ cash: 0, digital: 0 });
+
+  // Cash POS State
+  const [destination, setDestination] = useState('');
+  const [showStopDropdown, setShowStopDropdown] = useState(false);
+  const [paxCount, setPaxCount] = useState('1');
+  const [cashCollected, setCashCollected] = useState(0);
+
+  // Manifest Data
+  const [manifest, setManifest] = useState<any[]>([]);
 
   const fetchData = async () => {
     try {
       const meRes = await fetch(`${BASE_URL}/api/auth/me`);
       const meData = await meRes.json();
       if (!meData.user) throw new Error('Not authenticated');
-      setUser(meData.user);
+      setConductorProfile(meData.user);
 
-      const tripsRes = await fetch(`${BASE_URL}/api/trips`);
-      const tripsData = await tripsRes.json();
-      setAvailableTrips(tripsData.trips?.filter((t: any) => t.status === 'ASSIGNED' || t.status === 'IN_PROGRESS') || []);
+      const resTrips = await fetch(`${BASE_URL}/api/trips`);
+      const tripsData = await resTrips.json();
+      setAvailableTrips(tripsData.trips || []);
+
+      setCashCollected(1500);
+
     } catch (err) {
-      Alert.alert('Error', 'Failed to load data. Please login again.');
+      Alert.alert('Error', 'Failed to load data.');
       router.replace('/');
     } finally {
       setLoading(false);
@@ -52,380 +66,392 @@ export default function ConductorPOS() {
     fetchData();
   }, []);
 
+  // Update manifest when active trip changes
+  useEffect(() => {
+    if (activeTripId && availableTrips.length > 0) {
+      const trip = availableTrips.find(t => t.id === activeTripId);
+      if (trip && trip.bookings) {
+        const dynamicManifest = trip.bookings.map((b: any) => ({
+          id: b.id.substring(0, 8),
+          name: b.customer?.name || 'Customer',
+          stop: b.destination,
+          status: b.qrScanned ? 'Boarded' : 'Pending',
+          type: b.paymentStatus === 'PAID' ? 'Online' : 'Cash'
+        }));
+        setManifest(dynamicManifest);
+      } else {
+        setManifest([]);
+      }
+    }
+  }, [activeTripId, availableTrips]);
+
   const handleLogout = async () => {
-    await fetch(`${BASE_URL}/api/auth/logout`, { method: 'POST' });
-    router.replace('/');
+    try {
+      await fetch(`${BASE_URL}/api/auth/logout`, { method: 'POST' });
+      router.replace('/');
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  const handleBarcodeScanned = async ({ data }: { data: string }) => {
+  const handleStartShift = async (trip: any) => {
+    setActiveTripId(trip.id);
+    const now = new Date();
+    await Notifications.scheduleNotificationAsync({
+      content: { 
+        title: "🟢 Shift Started", 
+        body: `Route: ${trip.pickup.split(',')[0]} to ${trip.destination.split(',')[0]}\nTime: ${now.toLocaleTimeString()} | Date: ${now.toLocaleDateString()}`,
+        sound: true 
+      },
+      trigger: null,
+    });
+  };
+
+  const handleEndShift = async () => {
+    setActiveTripId(null);
+    const now = new Date();
+    await Notifications.scheduleNotificationAsync({
+      content: { 
+        title: "🔴 Shift Ended", 
+        body: `Time: ${now.toLocaleTimeString()} | Date: ${now.toLocaleDateString()}`,
+        sound: true 
+      },
+      trigger: null,
+    });
+  };
+
+  const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
     setScanned(true);
-    Alert.alert('Scanned Ticket!', `Data: ${data}`, [
-      { text: 'Verify & Board', onPress: () => verifyTicket(data) },
-      { text: 'Cancel', onPress: () => setScanned(false), style: 'cancel' }
-    ]);
-  };
-
-  const verifyTicket = (data: string) => {
-    // Mock verification
-    setScannedPassengers(prev => [{ id: data.substring(0, 8), time: new Date().toLocaleTimeString(), seats: 'Unassigned' }, ...prev]);
-    setScanned(false);
-    Alert.alert('Success', 'Passenger Boarded!');
-    setActiveTab('history');
-  };
-
-  const issueTicket = (method: 'CASH' | 'QR') => {
-    const total = paxCount * shiftDetails.fare;
-    if (method === 'CASH') setFares(p => ({ ...p, cash: p.cash + total }));
-    if (method === 'QR') setFares(p => ({ ...p, digital: p.digital + total }));
+    const ticketId = data.trim();
+    const existingPaxIndex = manifest.findIndex(p => p.id === ticketId);
     
-    setScannedPassengers(prev => [{ id: 'WALK-IN', time: new Date().toLocaleTimeString(), seats: paxCount + ' Pax' }, ...prev]);
-    Alert.alert('Ticket Issued', `Collected LKR ${total}`);
-    setPaxCount(1);
-    setActiveTab('history');
+    if (existingPaxIndex >= 0) {
+      if (manifest[existingPaxIndex].status === 'Boarded') {
+        Alert.alert("Warning", `Ticket ${ticketId} has already been used!`);
+      } else {
+        const newManifest = [...manifest];
+        newManifest[existingPaxIndex].status = 'Boarded';
+        setManifest(newManifest);
+        Alert.alert("✅ Verified!", `Passenger ${newManifest[existingPaxIndex].name} boarded successfully.`);
+        
+        // Push Notification Receipt
+        const now = new Date();
+        Notifications.scheduleNotificationAsync({
+          content: { 
+            title: "🎟️ Digital Ticket Validated", 
+            body: `Passenger: ${newManifest[existingPaxIndex].name}\nTime: ${now.toLocaleTimeString()} | Date: ${now.toLocaleDateString()}`,
+            sound: true 
+          },
+          trigger: null,
+        });
+      }
+    } else {
+      setManifest([{ id: ticketId.substring(0, 8), name: 'Scanned Pax', stop: 'Unknown', status: 'Boarded', type: 'Online' }, ...manifest]);
+      Alert.alert("✅ Valid Ticket", `Ticket Data: ${data}`);
+      
+      const now = new Date();
+      Notifications.scheduleNotificationAsync({
+        content: { 
+          title: "🎟️ New Ticket Scanned", 
+          body: `Time: ${now.toLocaleTimeString()} | Date: ${now.toLocaleDateString()}`,
+          sound: true 
+        },
+        trigger: null,
+      });
+    }
   };
+
+  const handleCashCheckout = () => {
+    const count = parseInt(paxCount);
+    if (!destination || isNaN(count) || count < 1) {
+      Alert.alert('Missing Info', 'Please enter a valid destination and number of passengers.');
+      return;
+    }
+
+    const totalFare = count * 500;
+    
+    const newWalkIns = Array.from({ length: count }).map((_, i) => ({
+      id: `WALK-${Math.floor(Math.random() * 10000)}`,
+      name: `Walk-in Pax ${i + 1}`,
+      stop: destination,
+      status: 'Boarded',
+      type: 'Cash'
+    }));
+
+    setManifest([...newWalkIns, ...manifest]);
+    setCashCollected(prev => prev + totalFare);
+    setDestination('');
+    setPaxCount('1');
+    Alert.alert('Payment Logged', `Collected LKR ${totalFare} for ${count} passenger(s) to ${destination}.`);
+
+    // Push Notification Receipt
+    const now = new Date();
+    Notifications.scheduleNotificationAsync({
+      content: { 
+        title: "💵 Cash Payment Logged", 
+        body: `Receipt: LKR ${totalFare}\nTo: ${destination} (${count} Pax)\nTime: ${now.toLocaleTimeString()} | Date: ${now.toLocaleDateString()}`,
+        sound: true 
+      },
+      trigger: null,
+    });
+  };
+
+  const activeTrip = availableTrips.find(t => t.id === activeTripId);
+  const completedTrips = availableTrips.filter(t => t.status === 'COMPLETED');
+  const shiftTrips = availableTrips.filter(t => t.status === 'ASSIGNED' || t.status === 'IN_PROGRESS');
 
   if (loading) {
     return (
-      <View style={[globalStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <LinearGradient colors={['#0f172a', '#1e1b4b']} style={[globalStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#38bdf8" />
-      </View>
+        <Text style={{ color: '#fff', marginTop: 10 }}>Loading Conductor System...</Text>
+      </LinearGradient>
     );
   }
 
-  // ---- SHIFT START SCREEN ----
-  if (!isShiftActive) {
+  if (!activeTripId) {
     return (
-      <View style={[globalStyles.container, { justifyContent: 'center' }]}>
+      <LinearGradient colors={['#0f172a', '#1e1b4b']} style={[globalStyles.container, { justifyContent: 'center' }]}>
         <GlassCard>
-          <Text style={styles.viewHeader}>Start Your Shift</Text>
-          <Text style={styles.viewSub}>Select your assigned route run</Text>
+          <Text style={{color: '#fff', fontSize: 24, fontWeight: 'bold', marginBottom: 10, textAlign: 'center'}}>Start Your Shift</Text>
+          <Text style={{color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginBottom: 20}}>
+            Select your assigned route run to begin boarding passengers.
+          </Text>
 
-          {availableTrips.map(trip => (
-            <TouchableOpacity 
-              key={trip.id} 
-              style={[styles.tripSelect, shiftDetails.tripId === trip.id && styles.tripSelectActive]}
-              onPress={() => setShiftDetails({ tripId: trip.id, route: `${trip.pickup} ➜ ${trip.destination}`, fare: 500 })}
-            >
-              <Text style={styles.tripText}>{trip.pickup} ➜ {trip.destination}</Text>
-              <Text style={styles.tripSub}>{trip.trackingNumber}</Text>
-            </TouchableOpacity>
-          ))}
-
-          {availableTrips.length === 0 && (
-            <Text style={{color: '#fff', textAlign: 'center', marginVertical: 20}}>No trips available.</Text>
+          {shiftTrips.length === 0 ? (
+            <Text style={{color: '#f87171', textAlign: 'center', marginBottom: 20}}>No Active Trips Available.</Text>
+          ) : (
+            shiftTrips.map(trip => (
+              <TouchableOpacity 
+                key={trip.id} 
+                style={styles.tripSelectCard}
+                onPress={() => handleStartShift(trip)}
+              >
+                <Text style={styles.tripText}>{trip.pickup.split(',')[0]} ➜ {trip.destination.split(',')[0]}</Text>
+                <Text style={styles.tripSubText}>{trip.trackingNumber} | {trip.vehicle?.number}</Text>
+              </TouchableOpacity>
+            ))
           )}
 
-          <GlassButton 
-            title="Start Shift" 
-            variant="success" 
-            onPress={() => setIsShiftActive(true)}
-            disabled={!shiftDetails.tripId}
-            style={{ marginTop: 20 }}
-          />
+          <GlassButton title="Log Out" onPress={handleLogout} variant="secondary" style={{ marginTop: 20 }} />
         </GlassCard>
       </View>
     );
   }
 
-  // ---- MAIN POS INTERFACE ----
   return (
-    <View style={globalStyles.container}>
-      {/* Header */}
+    <LinearGradient colors={['#0f172a', '#1e1b4b']} style={globalStyles.container}>
       <View style={styles.header}>
         <View>
           <Text style={globalStyles.headerText}>Conductor POS</Text>
-          <Text style={globalStyles.subText}>{shiftDetails.route}</Text>
+          <Text style={globalStyles.subText}>{activeTrip?.pickup.split(',')[0]} ➜ {activeTrip?.destination.split(',')[0]}</Text>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-          <Text style={styles.logoutText}>Logout</Text>
+        <TouchableOpacity onPress={handleEndShift} style={styles.logoutBtn}>
+          <Text style={styles.logoutText}>End Shift</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 120 }}>
-        {/* HOME TAB */}
-        {activeTab === 'home' && (
-          <View>
-            <GlassCard style={{ marginBottom: 20 }}>
-              <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
-                <Text style={styles.viewHeader}>Active Shift</Text>
-                <View style={styles.statusBadge}><Text style={styles.statusText}>🟢 Active</Text></View>
-              </View>
-              <Text style={globalStyles.subText}>ID: {user?.id.substring(0,8).toUpperCase()}</Text>
+      {activeTab !== 'scanner' && activeTab !== 'history' && (
+        <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20}}>
+          <GlassCard style={{flex: 1, marginRight: 10, alignItems: 'center'}}>
+             <Text style={{color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 'bold'}}>BOARDED</Text>
+             <Text style={{color: '#34d399', fontSize: 28, fontWeight: '900'}}>{manifest.filter(p => p.status === 'Boarded').length}</Text>
+          </GlassCard>
+          <GlassCard style={{flex: 1, alignItems: 'center'}}>
+             <Text style={{color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 'bold'}}>PENDING</Text>
+             <Text style={{color: '#f59e0b', fontSize: 28, fontWeight: '900'}}>{manifest.filter(p => p.status === 'Pending').length}</Text>
+          </GlassCard>
+        </View>
+      )}
 
-              <View style={{ marginTop: 20, flexDirection: 'row', justifyContent: 'space-between' }}>
-                <View>
-                  <Text style={styles.label}>CASH IN HAND</Text>
-                  <Text style={styles.amountText}>LKR {fares.cash}</Text>
-                </View>
-                <View>
-                  <Text style={styles.label}>DIGITAL (QR)</Text>
-                  <Text style={styles.amountText}>LKR {fares.digital}</Text>
-                </View>
+      {activeTab === 'home' ? (
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+          <Text style={styles.sectionTitle}>PASSENGER MANIFEST</Text>
+          {manifest.map((pax, index) => (
+            <GlassCard key={index} style={{ marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderLeftWidth: 4, borderLeftColor: pax.type === 'Cash' ? '#f59e0b' : '#38bdf8' }}>
+              <View>
+                <Text style={{color: '#fff', fontSize: 16, fontWeight: 'bold'}}>{pax.name}</Text>
+                <Text style={{color: 'rgba(255,255,255,0.5)', fontSize: 12}}>Drop-off: {pax.stop} | {pax.type}</Text>
+              </View>
+              <View style={[styles.statusBadge, pax.status === 'Boarded' ? styles.badgeSuccess : styles.badgePending]}>
+                <Text style={{color: pax.status === 'Boarded' ? '#10b981' : '#f59e0b', fontSize: 12, fontWeight: 'bold'}}>{pax.status}</Text>
               </View>
             </GlassCard>
-            
-            <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-              <GlassButton title="📷 Scan" onPress={() => setActiveTab('scan')} style={{flex: 1, marginRight: 5}} />
-              <GlassButton title="➕ Issue" onPress={() => setActiveTab('issue')} style={{flex: 1, marginLeft: 5}} variant="secondary" />
-            </View>
-          </View>
-        )}
-
-        {/* SCANNER TAB */}
-        {activeTab === 'scan' && (
-          <View>
-            <Text style={styles.viewHeader}>Scan Boarding Pass</Text>
-            <Text style={globalStyles.subText}>Point camera at passenger's QR code</Text>
-            
-            <GlassCard style={{ marginTop: 20, alignItems: 'center', padding: 0, overflow: 'hidden' }}>
-              {!permission ? (
-                <View style={{padding: 20}}><ActivityIndicator /></View>
-              ) : !permission.granted ? (
-                <View style={{padding: 20}}>
-                  <Text style={{color: '#fff', textAlign: 'center'}}>No camera access</Text>
-                  <GlassButton title="Grant Permission" onPress={requestPermission} style={{marginTop: 10}}/>
+          ))}
+        </ScrollView>
+      ) : activeTab === 'scanner' ? (
+        <View style={{ flex: 1, paddingBottom: 100 }}>
+          <Text style={styles.sectionTitle}>SCAN DIGITAL TICKET</Text>
+          <GlassCard style={{ flex: 1, overflow: 'hidden', padding: 0 }}>
+            {!permission ? (
+              <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                <Text style={{color: '#fff'}}>Requesting camera permission...</Text>
+              </View>
+            ) : !permission.granted ? (
+              <View style={{flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20}}>
+                <Text style={{color: '#fff', textAlign: 'center', marginBottom: 20}}>We need your permission to show the camera</Text>
+                <GlassButton title="Grant Permission" onPress={requestPermission} />
+              </View>
+            ) : (
+              <View style={{ flex: 1 }}>
+                <CameraView 
+                  style={{ flex: 1 }} 
+                  facing="back"
+                  onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+                  barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+                />
+                <View style={styles.scannerOverlay}>
+                  <View style={styles.scannerReticle} />
                 </View>
-              ) : (
-                <View style={styles.cameraContainer}>
-                  <CameraView
-                    style={StyleSheet.absoluteFillObject}
-                    facing="back"
-                    onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
-                  />
-                  {scanned && (
-                    <TouchableOpacity style={styles.scanAgainBtn} onPress={() => setScanned(false)}>
-                      <Text style={{color: '#fff', fontWeight: 'bold'}}>Tap to Scan Again</Text>
-                    </TouchableOpacity>
-                  )}
+                {scanned && (
+                  <View style={styles.scanAgainContainer}>
+                    <GlassButton title="Tap to Scan Another Ticket" onPress={() => setScanned(false)} variant="primary" />
+                  </View>
+                )}
+              </View>
+            )}
+          </GlassCard>
+        </View>
+      ) : activeTab === 'cash' ? (
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+          
+          <GlassCard style={{ marginBottom: 20, alignItems: 'center' }}>
+            <Text style={{color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: 'bold'}}>TOTAL SHIFT CASH</Text>
+            <Text style={{color: '#10b981', fontSize: 40, fontWeight: '900', marginVertical: 10}}>
+              LKR {cashCollected.toLocaleString()}
+            </Text>
+            <Text style={{color: 'rgba(255,255,255,0.5)', fontSize: 12}}>Must be handed to depot upon arrival.</Text>
+          </GlassCard>
+
+          <Text style={styles.sectionTitle}>ISSUE NEW TICKET</Text>
+          <GlassCard style={{ marginBottom: 20 }}>
+            <View style={{ marginBottom: 15, zIndex: 50 }}>
+              <Text style={{color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 'bold', marginBottom: 8}}>Destination Stop</Text>
+              
+              <TouchableOpacity 
+                style={styles.dropdownBtn}
+                onPress={() => setShowStopDropdown(!showStopDropdown)}
+              >
+                <Text style={{color: destination ? '#fff' : 'rgba(255,255,255,0.5)'}}>
+                  {destination || 'Select Destination Stop...'}
+                </Text>
+                <Text style={{color: '#fff'}}>▼</Text>
+              </TouchableOpacity>
+
+              {showStopDropdown && (
+                <View style={styles.dropdownList}>
+                  <ScrollView nestedScrollEnabled style={{ maxHeight: 150 }}>
+                    {COMMON_STOPS.map(stop => (
+                      <TouchableOpacity 
+                        key={stop} 
+                        style={styles.dropdownItem}
+                        onPress={() => {
+                          setDestination(stop);
+                          setShowStopDropdown(false);
+                        }}
+                      >
+                        <Text style={{color: '#fff'}}>{stop}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
                 </View>
               )}
-            </GlassCard>
-
-            <View style={{marginTop: 20}}>
-              <GlassButton title="Simulate Scan (Test)" variant="secondary" onPress={() => handleBarcodeScanned({data: 'TICKET-TEST-1234'})} />
             </View>
-          </View>
-        )}
 
-        {/* ISSUE TICKET TAB */}
-        {activeTab === 'issue' && (
-          <View>
-            <Text style={styles.viewHeader}>Issue Walk-in Ticket</Text>
-            <GlassCard style={{ marginTop: 20 }}>
-              <Text style={styles.label}>Number of Passengers</Text>
-              <View style={styles.paxSelector}>
-                <TouchableOpacity onPress={() => setPaxCount(Math.max(1, paxCount - 1))} style={styles.paxBtn}><Text style={styles.paxText}>-</Text></TouchableOpacity>
-                <Text style={styles.paxValue}>{paxCount}</Text>
-                <TouchableOpacity onPress={() => setPaxCount(paxCount + 1)} style={styles.paxBtn}><Text style={styles.paxText}>+</Text></TouchableOpacity>
+            <View style={{ marginBottom: 25, zIndex: 10 }}>
+              <Text style={{color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 'bold', marginBottom: 8}}>Number of Passengers</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <TouchableOpacity onPress={() => setPaxCount(prev => Math.max(1, parseInt(prev || '1') - 1).toString())} style={styles.counterBtn}>
+                  <Text style={{color: '#fff', fontSize: 20}}>-</Text>
+                </TouchableOpacity>
+                <GlassInput 
+                  value={paxCount}
+                  onChangeText={setPaxCount}
+                  keyboardType="numeric"
+                  style={{ flex: 1, marginHorizontal: 15, textAlign: 'center', fontSize: 20 }}
+                />
+                <TouchableOpacity onPress={() => setPaxCount(prev => (parseInt(prev || '1') + 1).toString())} style={styles.counterBtn}>
+                  <Text style={{color: '#fff', fontSize: 20}}>+</Text>
+                </TouchableOpacity>
               </View>
-
-              <View style={styles.totalBox}>
-                <Text style={{color: '#fff'}}>Total Fare</Text>
-                <Text style={styles.totalText}>LKR {paxCount * shiftDetails.fare}</Text>
-              </View>
-
-              <GlassButton title="💵 Collect Cash" onPress={() => issueTicket('CASH')} variant="success" style={{marginTop: 20}} />
-              <GlassButton title="📱 Generate LANKAQR" onPress={() => issueTicket('QR')} variant="primary" style={{marginTop: 10}} />
-            </GlassCard>
-          </View>
-        )}
-
-        {/* HISTORY / MANIFEST TAB */}
-        {activeTab === 'history' && (
-          <View>
-            <Text style={styles.viewHeader}>Manifest</Text>
-            <Text style={globalStyles.subText}>Boarded Passengers: {scannedPassengers.length}</Text>
-            
-            <View style={{ marginTop: 20 }}>
-              {scannedPassengers.length === 0 ? (
-                <GlassCard><Text style={{color: '#fff', textAlign: 'center'}}>No passengers boarded yet.</Text></GlassCard>
-              ) : (
-                scannedPassengers.map((p, i) => (
-                  <GlassCard key={i} style={{ marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', padding: 15 }}>
-                    <View>
-                      <Text style={{color: '#fff', fontWeight: 'bold'}}>{p.id}</Text>
-                      <Text style={{color: 'rgba(255,255,255,0.6)'}}>Seats: {p.seats}</Text>
-                    </View>
-                    <Text style={{color: '#10b981'}}>{p.time}</Text>
-                  </GlassCard>
-                ))
-              )}
             </View>
-          </View>
-        )}
-      </ScrollView>
 
-      {/* Custom Bottom Tabs */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingTop: 15, borderTopWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+               <Text style={{color: '#fff', fontSize: 18, fontWeight: 'bold'}}>Total Fare</Text>
+               <Text style={{color: '#38bdf8', fontSize: 24, fontWeight: 'bold'}}>LKR {(parseInt(paxCount || '0') * 500).toLocaleString()}</Text>
+            </View>
+
+            <GlassButton title="Log Cash & Print Ticket" variant="success" onPress={handleCashCheckout} />
+          </GlassCard>
+        </ScrollView>
+      ) : activeTab === 'history' ? (
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+          <Text style={styles.sectionTitle}>COMPLETED HISTORY</Text>
+          {completedTrips.map(trip => (
+            <GlassCard key={trip.id} style={{ marginBottom: 15, opacity: 0.8 }}>
+              <Text style={styles.runTitle}>{trip.pickup.split(',')[0]} ➜ {trip.destination.split(',')[0]}</Text>
+              <Text style={{ color: '#10b981', marginTop: 5 }}>✅ Done</Text>
+              <Text style={styles.runDetail}>{trip.trackingNumber} | {new Date(trip.endAt || trip.updatedAt).toLocaleDateString()}</Text>
+            </GlassCard>
+          ))}
+          {completedTrips.length === 0 && (
+            <Text style={{color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 20}}>No completed trips yet.</Text>
+          )}
+        </ScrollView>
+      ) : null}
+
       <View style={styles.bottomNav}>
         <TouchableOpacity style={[styles.navItem, activeTab === 'home' && styles.navActive]} onPress={() => setActiveTab('home')}>
-          <IconHome />
-          <Text style={[styles.navText, activeTab === 'home' && styles.navTextActive]}>Home</Text>
+          <Ionicons name="people-outline" size={24} color={activeTab === 'home' ? '#38bdf8' : 'rgba(255,255,255,0.5)'} />
+          <Text style={[styles.navText, activeTab === 'home' && styles.navTextActive]}>Manifest</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.navItem, activeTab === 'scan' && styles.navActive]} onPress={() => setActiveTab('scan')}>
-          <IconScan />
-          <Text style={[styles.navText, activeTab === 'scan' && styles.navTextActive]}>Scan</Text>
+        <TouchableOpacity style={[styles.navItem, activeTab === 'scanner' && styles.navActive]} onPress={() => setActiveTab('scanner')}>
+          <Ionicons name="qr-code-outline" size={24} color={activeTab === 'scanner' ? '#38bdf8' : 'rgba(255,255,255,0.5)'} />
+          <Text style={[styles.navText, activeTab === 'scanner' && styles.navTextActive]}>Scan QR</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.navItem, activeTab === 'issue' && styles.navActive]} onPress={() => setActiveTab('issue')}>
-          <IconIssue />
-          <Text style={[styles.navText, activeTab === 'issue' && styles.navTextActive]}>Issue</Text>
+        <TouchableOpacity style={[styles.navItem, activeTab === 'cash' && styles.navActive]} onPress={() => setActiveTab('cash')}>
+          <Ionicons name="cash-outline" size={24} color={activeTab === 'cash' ? '#38bdf8' : 'rgba(255,255,255,0.5)'} />
+          <Text style={[styles.navText, activeTab === 'cash' && styles.navTextActive]}>Cash</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.navItem, activeTab === 'history' && styles.navActive]} onPress={() => setActiveTab('history')}>
-          <IconManifest />
-          <Text style={[styles.navText, activeTab === 'history' && styles.navTextActive]}>Manifest</Text>
+          <Ionicons name="list-outline" size={24} color={activeTab === 'history' ? '#38bdf8' : 'rgba(255,255,255,0.5)'} />
+          <Text style={[styles.navText, activeTab === 'history' && styles.navTextActive]}>History</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    marginTop: 40,
-  },
-  logoutBtn: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
-    padding: 8,
-    borderRadius: 8,
-  },
-  logoutText: {
-    color: '#f87171',
-    fontWeight: 'bold',
-  },
-  viewHeader: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#fff',
-  },
-  viewSub: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.6)',
-    marginBottom: 20,
-  },
-  tripSelect: {
-    backgroundColor: 'rgba(15, 23, 42, 0.8)',
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.2)',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 10,
-  },
-  tripSelectActive: {
-    borderColor: '#38bdf8',
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-  },
-  tripText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  tripSub: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  statusBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-  },
-  statusText: {
-    color: '#34d399',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  label: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 12,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  amountText: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: '800',
-  },
-  cameraContainer: {
-    width: '100%',
-    height: 300,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scanAgainBtn: {
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    padding: 15,
-    borderRadius: 30,
-    position: 'absolute',
-    bottom: 20,
-  },
-  paxSelector: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.8)',
-    borderRadius: 12,
-    padding: 10,
-    marginTop: 10,
-  },
-  paxBtn: {
-    backgroundColor: 'rgba(56, 189, 248, 0.2)',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  paxText: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
-  paxValue: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
-  totalBox: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
-  },
-  totalText: {
-    color: '#38bdf8',
-    fontSize: 24,
-    fontWeight: '900',
-  },
-  bottomNav: {
-    position: 'absolute',
-    bottom: 30,
-    left: 20,
-    right: 20,
-    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-    flexDirection: 'row',
-    borderRadius: 30,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
-    justifyContent: 'space-around',
-  },
-  navItem: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    alignItems: 'center',
-    width: 70,
-  },
-  navActive: {
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-  },
-  navText: {
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '600',
-    fontSize: 10,
-    marginTop: 4,
-  },
-  navTextActive: {
-    color: '#38bdf8',
-  }
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, marginTop: 40 },
+  logoutBtn: { backgroundColor: 'rgba(239, 68, 68, 0.2)', padding: 8, borderRadius: 8 },
+  logoutText: { color: '#f87171', fontWeight: 'bold' },
+  sectionTitle: { color: 'rgba(255,255,255,0.5)', fontWeight: '700', fontSize: 12, letterSpacing: 1, marginBottom: 10, marginTop: 10 },
+  
+  tripSelectCard: { backgroundColor: 'rgba(15, 23, 42, 0.6)', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)', marginBottom: 10 },
+  tripText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  tripSubText: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 4 },
+
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1 },
+  badgeSuccess: { backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: '#10b981' },
+  badgePending: { backgroundColor: 'rgba(245, 158, 11, 0.1)', borderColor: '#f59e0b' },
+  
+  runTitle: { color: '#fff', fontSize: 18, fontWeight: '800', marginBottom: 4 },
+  runDetail: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 4 },
+
+  scannerOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+  scannerReticle: { width: 250, height: 250, borderWidth: 2, borderColor: '#38bdf8', backgroundColor: 'transparent', borderRadius: 20 },
+  scanAgainContainer: { position: 'absolute', bottom: 20, left: 20, right: 20 },
+
+  dropdownBtn: { backgroundColor: 'rgba(15, 23, 42, 0.6)', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  dropdownList: { backgroundColor: 'rgba(15, 23, 42, 0.95)', borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)', borderRadius: 12, marginTop: 5, position: 'absolute', top: 75, left: 0, right: 0, zIndex: 100 },
+  dropdownItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
+
+  counterBtn: { backgroundColor: 'rgba(15, 23, 42, 0.8)', width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)' },
+
+  bottomNav: { position: 'absolute', bottom: 30, left: 20, right: 20, backgroundColor: 'rgba(15, 23, 42, 0.95)', flexDirection: 'row', borderRadius: 30, padding: 8, borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)', justifyContent: 'space-around', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20, elevation: 15 },
+  navItem: { paddingVertical: 10, paddingHorizontal: 15, borderRadius: 20, alignItems: 'center' },
+  navActive: { backgroundColor: 'rgba(56, 189, 248, 0.15)' },
+  navText: { color: 'rgba(255,255,255,0.5)', fontWeight: '700', fontSize: 10, marginTop: 4 },
+  navTextActive: { color: '#38bdf8' }
 });
