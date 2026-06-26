@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Bus, Users, MapPin, Route, Ticket,
   MapPinned, Wrench, Flame, Receipt, BarChart3,
-  Settings, LogOut, User as UserIcon, Menu, X, Bell, QrCode, AlertCircle, Brain, TrendingUp
+  Settings, LogOut, User as UserIcon, Menu, X, Bell, QrCode, AlertCircle, Brain, TrendingUp, Clock, ChevronRight
 } from 'lucide-react';
 import styles from './DashboardLayout.module.css';
 import { useLanguage } from '@/components/LanguageProvider';
@@ -16,6 +16,14 @@ interface DashboardLayoutClientProps {
   user: { id: string; email: string; name: string; role: string; };
 }
 
+type NavItem = {
+  name: string;
+  path?: string;
+  icon?: any;
+  roles: string[];
+  children?: NavItem[];
+};
+
 export default function DashboardLayoutClient({ children, user }: DashboardLayoutClientProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -23,6 +31,7 @@ export default function DashboardLayoutClient({ children, user }: DashboardLayou
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const { language, setLanguage } = useLanguage();
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
 
   useEffect(() => {
     async function fetchNotifications() {
@@ -61,33 +70,92 @@ export default function DashboardLayoutClient({ children, user }: DashboardLayou
     CUSTOMER: 'Passenger', ACCOUNTANT: 'Accountant', CONDUCTOR: 'Bus Conductor'
   };
 
-  const navigationItems = [
+  const navigationItems: NavItem[] = [
     { name: 'Dashboard Overview', path: '/dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'DRIVER', 'ACCOUNTANT'] },
-    { name: 'Bus Fleet', path: '/dashboard/vehicles', icon: Bus, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER'] },
-    { name: 'Drivers', path: '/dashboard/drivers', icon: Users, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER'] },
-    { name: 'Route Plans', path: '/dashboard/routes', icon: Route, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER'] },
-    { name: 'Route Runs', path: '/dashboard/route-runs', icon: MapPinned, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'DRIVER'] },
-    { name: 'Live Bus Tracker', path: '/dashboard/tracking', icon: MapPin, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'DRIVER', 'CUSTOMER'] },
-    { name: 'Passenger Tickets', path: '/dashboard/bookings', icon: Ticket, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'CUSTOMER'] },
-    { name: 'Bus Stops', path: '/dashboard/stops', icon: MapPinned, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER'] },
-    { name: 'Bus Maintenance', path: '/dashboard/maintenance', icon: Wrench, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER'] },
-    { name: 'Fuel Logs', path: '/dashboard/fuel', icon: Flame, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'ACCOUNTANT'] },
-    { name: 'Billing & Revenue', path: '/dashboard/billing', icon: Receipt, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'ACCOUNTANT'] },
-    { name: 'Reports & Analytics', path: '/dashboard/reports', icon: BarChart3, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'ACCOUNTANT'] },
-    { name: 'AI Forecast', path: '/dashboard/ai-analytics', icon: Brain, roles: ['ADMIN', 'TRANSPORT_MANAGER'] },
-    { name: 'Fleet Heatmap', path: '/dashboard/fleet-utilization', icon: TrendingUp, roles: ['ADMIN', 'TRANSPORT_MANAGER'] },
-    { name: 'Disputes & Refunds', path: '/dashboard/disputes', icon: AlertCircle, roles: ['ADMIN', 'TRANSPORT_MANAGER'] },
-    { name: 'Conductor POS', path: '/dashboard/conductor', icon: QrCode, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'CONDUCTOR'] },
-    { name: 'Driver Portal', path: '/dashboard/driver-portal', icon: Bus, roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'DRIVER'] },
-    { name: 'Passenger Portal', path: '/dashboard/customer-portal', icon: UserIcon, roles: ['CUSTOMER'] },
-    { name: 'System Admin Panel', path: '/dashboard/admin', icon: Settings, roles: ['ADMIN'] },
+    { 
+      name: 'Masters', 
+      icon: Users,
+      roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER'],
+      children: [
+        { name: 'Bus Fleet', path: '/dashboard/vehicles', roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER'] },
+        { name: 'Drivers', path: '/dashboard/drivers', roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER'] },
+        { name: 'Driver Attendance', path: '/dashboard/driver-attendance', roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER'] },
+        { name: 'Conductors', path: '/dashboard/conductors', roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER'] },
+        { name: 'Bus Stops', path: '/dashboard/stops', roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER'] },
+      ]
+    },
+    {
+      name: 'Operations',
+      icon: Route,
+      roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'DRIVER', 'CUSTOMER', 'ACCOUNTANT'],
+      children: [
+        { name: 'Route Plans', path: '/dashboard/routes', roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER'] },
+        { name: 'Route Runs', path: '/dashboard/route-runs', roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'DRIVER'] },
+        { name: 'Live Bus Tracker', path: '/dashboard/tracking', roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'DRIVER', 'CUSTOMER'] },
+        { name: 'Bus Maintenance', path: '/dashboard/maintenance', roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER'] },
+        { name: 'Fuel Logs', path: '/dashboard/fuel', roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'ACCOUNTANT'] },
+      ]
+    },
+    {
+      name: 'Finance',
+      icon: Receipt,
+      roles: ['ADMIN', 'TRANSPORT_MANAGER', 'ACCOUNTANT', 'DISPATCHER', 'CUSTOMER'],
+      children: [
+        { name: 'Passenger Tickets', path: '/dashboard/bookings', roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'CUSTOMER'] },
+        { name: 'Billing & Revenue', path: '/dashboard/billing', roles: ['ADMIN', 'TRANSPORT_MANAGER', 'ACCOUNTANT'] },
+        { name: 'Disputes & Refunds', path: '/dashboard/disputes', roles: ['ADMIN', 'TRANSPORT_MANAGER'] },
+      ]
+    },
+    {
+      name: 'Insights',
+      icon: BarChart3,
+      roles: ['ADMIN', 'TRANSPORT_MANAGER', 'ACCOUNTANT'],
+      children: [
+        { name: 'Reports & Analytics', path: '/dashboard/reports', roles: ['ADMIN', 'TRANSPORT_MANAGER', 'ACCOUNTANT'] },
+        { name: 'AI Forecast', path: '/dashboard/ai-analytics', roles: ['ADMIN', 'TRANSPORT_MANAGER'] },
+        { name: 'Fleet Heatmap', path: '/dashboard/fleet-utilization', roles: ['ADMIN', 'TRANSPORT_MANAGER'] },
+      ]
+    },
+    {
+      name: 'Portals',
+      icon: UserIcon,
+      roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'CONDUCTOR', 'DRIVER', 'CUSTOMER'],
+      children: [
+        { name: 'Conductor POS', path: '/dashboard/conductor', roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'CONDUCTOR'] },
+        { name: 'Driver Portal', path: '/dashboard/driver-portal', roles: ['ADMIN', 'TRANSPORT_MANAGER', 'DISPATCHER', 'DRIVER'] },
+        { name: 'Passenger Portal', path: '/dashboard/customer-portal', roles: ['CUSTOMER'] },
+      ]
+    },
+    {
+      name: 'System',
+      icon: Settings,
+      roles: ['ADMIN'],
+      children: [
+        { name: 'System Admin Panel', path: '/dashboard/admin', roles: ['ADMIN'] },
+      ]
+    }
   ];
 
-  // Role-based page access control
-  const currentNavItem = navigationItems.find(item => {
-    if (item.path === '/dashboard') {
-      return pathname === '/dashboard';
+  // Auto-expand group based on current pathname
+  useEffect(() => {
+    const activeGroup = navigationItems.find(group => 
+      group.children?.some(child => child.path && (pathname === child.path || pathname.startsWith(child.path + '/')))
+    );
+    if (activeGroup && !expandedGroups.includes(activeGroup.name)) {
+      setExpandedGroups(prev => [...prev, activeGroup.name]);
     }
+  }, [pathname]);
+
+  const toggleGroup = (name: string) => {
+    setExpandedGroups(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]);
+  };
+
+  // Role-based page access control
+  const allNavItems = navigationItems.flatMap(item => item.children ? [item, ...item.children] : [item]);
+  
+  const currentNavItem = allNavItems.find(item => {
+    if (!item.path) return false;
+    if (item.path === '/dashboard') return pathname === '/dashboard';
     return pathname.startsWith(item.path);
   });
   const isAllowed = !currentNavItem || currentNavItem.roles.includes(user.role);
@@ -116,8 +184,6 @@ export default function DashboardLayoutClient({ children, user }: DashboardLayou
       </div>
     );
   }
-  
-  const activeNavItems = navigationItems.filter(item => item.roles.includes(user.role));
 
   if (pathname.startsWith('/dashboard/conductor') || pathname.startsWith('/dashboard/driver-portal') || pathname.startsWith('/dashboard/customer-portal')) {
     return (
@@ -156,14 +222,53 @@ export default function DashboardLayoutClient({ children, user }: DashboardLayou
         </div>
 
         <nav className={styles.sidebarNav}>
-          {activeNavItems.map((item) => {
+          {navigationItems.map((item) => {
+            const hasAccess = item.roles.includes(user.role);
+            if (!hasAccess) return null;
+
+            if (!item.children) {
+              const Icon = item.icon;
+              const isActive = pathname === item.path;
+              return (
+                <Link key={item.name} href={item.path!} className={`${styles.navLink} ${isActive ? styles.navLinkActive : ''}`}>
+                  <Icon size={19} className={styles.navIcon} />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            }
+
+            const isOpen = expandedGroups.includes(item.name);
+            const hasActiveChild = item.children.some(child => child.path && (pathname === child.path || pathname.startsWith(child.path + '/')));
             const Icon = item.icon;
-            const isActive = pathname === item.path;
+
+            const visibleChildren = item.children.filter(child => child.roles.includes(user.role));
+            if (visibleChildren.length === 0) return null;
+
             return (
-              <Link key={item.path} href={item.path} className={`${styles.navLink} ${isActive ? styles.navLinkActive : ''}`}>
-                <Icon size={19} className={styles.navIcon} />
-                <span>{item.name}</span>
-              </Link>
+              <div key={item.name} className={styles.navGroup}>
+                <button 
+                  className={`${styles.navGroupHeader} ${hasActiveChild && !isOpen ? styles.navGroupHeaderActive : ''}`} 
+                  onClick={() => toggleGroup(item.name)}
+                >
+                  <div className={styles.navGroupTitle}>
+                    <Icon size={19} className={styles.navIcon} />
+                    <span>{item.name}</span>
+                  </div>
+                  <ChevronRight size={16} className={`${styles.navGroupChevron} ${isOpen ? styles.navGroupChevronOpen : ''}`} />
+                </button>
+                {isOpen && (
+                  <div className={styles.navChildren}>
+                    {visibleChildren.map(child => {
+                      const isChildActive = pathname === child.path || pathname.startsWith(child.path + '/');
+                      return (
+                        <Link key={child.name} href={child.path!} className={`${styles.navChildLink} ${isChildActive ? styles.navChildLinkActive : ''}`}>
+                          {child.name}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>

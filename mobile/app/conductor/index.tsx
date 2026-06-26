@@ -2,20 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import * as Notifications from 'expo-notifications';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassCard, GlassButton, GlassInput, globalStyles } from '../../components/ui';
 import { BASE_URL } from '../../config';
 
-// Notifications config
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// Notifications config disabled for Android Expo Go SDK 53+
+// import * as Notifications from 'expo-notifications';
 
 const COMMON_STOPS = ['Kandy', 'Kurunegala', 'Colombo', 'Kadawatha', 'Kegalle', 'Galle', 'Matara'];
 
@@ -97,27 +90,13 @@ export default function ConductorPortal() {
   const handleStartShift = async (trip: any) => {
     setActiveTripId(trip.id);
     const now = new Date();
-    await Notifications.scheduleNotificationAsync({
-      content: { 
-        title: "🟢 Shift Started", 
-        body: `Route: ${trip.pickup.split(',')[0]} to ${trip.destination.split(',')[0]}\nTime: ${now.toLocaleTimeString()} | Date: ${now.toLocaleDateString()}`,
-        sound: true 
-      },
-      trigger: null,
-    });
+    // Notifications disabled for Expo Go
   };
 
   const handleEndShift = async () => {
     setActiveTripId(null);
     const now = new Date();
-    await Notifications.scheduleNotificationAsync({
-      content: { 
-        title: "🔴 Shift Ended", 
-        body: `Time: ${now.toLocaleTimeString()} | Date: ${now.toLocaleDateString()}`,
-        sound: true 
-      },
-      trigger: null,
-    });
+    // Notifications disabled for Expo Go
   };
 
   const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
@@ -136,28 +115,14 @@ export default function ConductorPortal() {
         
         // Push Notification Receipt
         const now = new Date();
-        Notifications.scheduleNotificationAsync({
-          content: { 
-            title: "🎟️ Digital Ticket Validated", 
-            body: `Passenger: ${newManifest[existingPaxIndex].name}\nTime: ${now.toLocaleTimeString()} | Date: ${now.toLocaleDateString()}`,
-            sound: true 
-          },
-          trigger: null,
-        });
+        // Notifications disabled for Expo Go
       }
     } else {
       setManifest([{ id: ticketId.substring(0, 8), name: 'Scanned Pax', stop: 'Unknown', status: 'Boarded', type: 'Online' }, ...manifest]);
       Alert.alert("✅ Valid Ticket", `Ticket Data: ${data}`);
       
       const now = new Date();
-      Notifications.scheduleNotificationAsync({
-        content: { 
-          title: "🎟️ New Ticket Scanned", 
-          body: `Time: ${now.toLocaleTimeString()} | Date: ${now.toLocaleDateString()}`,
-          sound: true 
-        },
-        trigger: null,
-      });
+      // Notifications disabled for Expo Go
     }
   };
 
@@ -186,14 +151,7 @@ export default function ConductorPortal() {
 
     // Push Notification Receipt
     const now = new Date();
-    Notifications.scheduleNotificationAsync({
-      content: { 
-        title: "💵 Cash Payment Logged", 
-        body: `Receipt: LKR ${totalFare}\nTo: ${destination} (${count} Pax)\nTime: ${now.toLocaleTimeString()} | Date: ${now.toLocaleDateString()}`,
-        sound: true 
-      },
-      trigger: null,
-    });
+    // Notifications disabled for Expo Go
   };
 
   const activeTrip = availableTrips.find(t => t.id === activeTripId);
@@ -235,7 +193,7 @@ export default function ConductorPortal() {
 
           <GlassButton title="Log Out" onPress={handleLogout} variant="secondary" style={{ marginTop: 20 }} />
         </GlassCard>
-      </View>
+      </LinearGradient>
     );
   }
 

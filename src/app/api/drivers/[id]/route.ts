@@ -25,6 +25,15 @@ export async function PUT(
       }
     });
 
+    if (body.attendanceStatus) {
+      await db.auditLog.create({
+        data: {
+          action: "Driver Attendance",
+          details: `Driver ${updated.name} clocked ${body.attendanceStatus === 'Present' ? 'IN' : 'OUT'}`
+        }
+      });
+    }
+
     return NextResponse.json({ success: true, driver: updated });
   } catch (error) {
     console.error(error);

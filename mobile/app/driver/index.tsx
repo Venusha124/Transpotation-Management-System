@@ -5,21 +5,13 @@ import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
+// Notifications disabled for Android Expo Go SDK 53+
+// import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassCard, GlassButton, GlassInput, globalStyles } from '../../components/ui';
 import { BASE_URL } from '../../config';
-
-// Notifications config
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
 
 export default function DriverPortal() {
   const [driverProfile, setDriverProfile] = useState<any>(null);
@@ -81,34 +73,33 @@ export default function DriverPortal() {
 
   async function registerForPushNotificationsAsync() {
     let token;
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF231F7C',
-      });
-    }
+    // if (Platform.OS === 'android') {
+    //   await Notifications.setNotificationChannelAsync('default', {
+    //     name: 'default',
+    //     importance: Notifications.AndroidImportance.MAX,
+    //     vibrationPattern: [0, 250, 250, 250],
+    //     lightColor: '#FF231F7C',
+    //   });
+    // }
 
     if (Device.isDevice) {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      if (finalStatus !== 'granted') {
-        // Not granting push is okay, we just won't have tokens
-        return;
-      }
-      try {
-        token = (await Notifications.getExpoPushTokenAsync({ projectId: '00000000-0000-0000-0000-000000000000' })).data;
-        setExpoPushToken(token);
-      } catch (error) {
-        console.warn("Could not fetch Expo Push Token (Requires EAS projectId). Using mock token.");
-        setExpoPushToken('Mock-Expo-Push-Token-123');
-      }
-      // Here you would normally POST this token to your Next.js backend to save against the driver
+      // Notifications disabled for Expo Go
+      // const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      // let finalStatus = existingStatus;
+      // if (existingStatus !== 'granted') {
+      //   const { status } = await Notifications.requestPermissionsAsync();
+      //   finalStatus = status;
+      // }
+      // if (finalStatus !== 'granted') {
+      //   return;
+      // }
+      // try {
+      //   token = (await Notifications.getExpoPushTokenAsync({ projectId: '00000000-0000-0000-0000-000000000000' })).data;
+      //   setExpoPushToken(token);
+      // } catch (error) {
+      //   console.warn("Could not fetch Expo Push Token (Requires EAS projectId). Using mock token.");
+      //   setExpoPushToken('Mock-Expo-Push-Token-123');
+      // }
     }
   }
 
@@ -165,14 +156,7 @@ export default function DriverPortal() {
         const timeStr = now.toLocaleTimeString();
         const locStr = location ? `Lat: ${location.coords.latitude.toFixed(3)}, Lng: ${location.coords.longitude.toFixed(3)}` : 'Unknown Location';
         
-        await Notifications.scheduleNotificationAsync({
-          content: { 
-            title: newStatus === 'Present' ? "🟢 Clocked In Successfully" : "🔴 Clocked Out Successfully", 
-            body: `Date & Time: ${dateStr} at ${timeStr}\nLocation: ${locStr}`,
-            sound: true 
-          },
-          trigger: null,
-        });
+        // Notifications disabled for Expo Go
       }
     } catch (err) {
       Alert.alert('Error', 'Failed to update attendance');
@@ -237,7 +221,7 @@ export default function DriverPortal() {
           <Text style={styles.sectionTitle}>Profile Not Linked</Text>
           <GlassButton title="Log Out" onPress={handleLogout} variant="secondary" />
         </GlassCard>
-      </View>
+      </LinearGradient>
     );
   }
 
@@ -324,10 +308,7 @@ export default function DriverPortal() {
                   variant="secondary" 
                   style={{marginTop: 10}}
                   onPress={async () => {
-                    await Notifications.scheduleNotificationAsync({
-                      content: { title: "Trip Update 🚀", body: 'You have been assigned a new route to Kandy!', sound: true },
-                      trigger: null,
-                    });
+                    // Notifications disabled for Expo Go
                   }} 
                />
             </GlassCard>
