@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, Map, Calendar, ShieldCheck, Zap, ArrowRight, Compass, Shield, Users, Clock, Award } from 'lucide-react';
+import { MapPin, Map, Calendar, ShieldCheck, ArrowRight, Shield, Users, Clock, Award } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
@@ -13,6 +13,14 @@ interface Trip {
   destination: string;
   status: string;
   eta: string;
+}
+
+interface Vehicle {
+  id: string;
+  brand: string;
+  model: string;
+  type: string;
+  capacity: number;
 }
 
 export default function LandingPage() {
@@ -27,10 +35,9 @@ export default function LandingPage() {
   const [trackingId, setTrackingId] = useState('');
   const [trackedTrip, setTrackedTrip] = useState<Trip | null>(null);
   
-  const [reviews, setReviews] = useState<any[]>([]);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   
-  const [fleet, setFleet] = useState<any[]>([]);
+  const [fleet, setFleet] = useState<Vehicle[]>([]);
 
   useEffect(() => {
     // Fetch available trips to populate dropdowns or initial data
@@ -41,20 +48,12 @@ export default function LandingPage() {
       })
       .catch(console.error);
       
-    // Fetch top reviews
-    fetch('/api/reviews')
-      .then(res => res.json())
-      .then(data => {
-        if (data.reviews) setReviews(data.reviews);
-      })
-      .catch(console.error);
-      
     // Fetch fleet (Buses)
     fetch('/api/vehicles')
       .then(res => res.json())
       .then(data => {
         if (data.vehicles) {
-          const buses = data.vehicles.filter((v: any) => v.type.toLowerCase().includes('bus') || v.type.toLowerCase() === 'passenger coach' || v.type.toLowerCase() === 'double decker' || v.capacity > 15);
+          const buses = data.vehicles.filter((v: Vehicle) => v.type.toLowerCase().includes('bus') || v.type.toLowerCase() === 'passenger coach' || v.type.toLowerCase() === 'double decker' || v.capacity > 15);
           setFleet(buses.slice(0, 3));
         }
       })

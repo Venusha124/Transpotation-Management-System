@@ -9,7 +9,6 @@ import { isValidEmail, isValidPassword } from '../../lib/validators';
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectPath = searchParams.get('redirect') || '/dashboard';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -51,39 +50,13 @@ function LoginForm() {
       }
       router.push(searchParams.get('redirect') || defaultPath);
       router.refresh();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
       setLoading(false);
     }
   };
 
-  // Helper for quick logging in during system test evaluation
-  const handleQuickLogin = async (roleEmail: string) => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: roleEmail, password: 'password123' }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
 
-      // Redirect depending on the role
-      if (data.user.role === 'CUSTOMER') {
-        router.push('/dashboard/customer-portal');
-      } else if (data.user.role === 'DRIVER') {
-        router.push('/dashboard/driver-portal');
-      } else {
-        router.push('/dashboard');
-      }
-      router.refresh();
-    } catch (err: any) {
-      setError(err.message);
-      setLoading(false);
-    }
-  };
 
   return (
     <div className={styles.splitContainer}>

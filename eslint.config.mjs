@@ -12,7 +12,15 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "mobile/**",
+    "mobile_bad/**",
+    "*.js"
   ]),
+  {
+    rules: {
+      "@next/next/no-img-element": "off"
+    }
+  }
 ]);
 
 export default eslintConfig;

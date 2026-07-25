@@ -60,8 +60,8 @@ export default function RegisterPage() {
         router.push('/dashboard');
       }
       router.refresh();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
       setLoading(false);
     }
   };

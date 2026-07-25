@@ -102,7 +102,7 @@ export default function SeatMap({
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {rows.map((row, rIndex) => (
           <div key={`row-${rIndex}`} style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-            {row.map((seatId, sIndex) => {
+            {row.map((seatId) => {
               if (seatId === 'AISLE') {
                 return <div key={`aisle-${rIndex}`} style={{ width: '30px' }} />; // Aisle gap
               }

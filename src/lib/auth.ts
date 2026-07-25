@@ -1,6 +1,15 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
+export interface TokenPayload {
+  id: string;
+  email: string;
+  role: string;
+  name: string;
+  exp?: number;
+  iat?: number;
+}
+
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-tms-jwt-key';
 
 // Password Hashing (Node.js runtime)
@@ -18,10 +27,10 @@ export function signToken(payload: { id: string; email: string; role: string; na
 }
 
 // Standard verification for Node.js API Routes
-export function verifyTokenNode(token: string): any {
+export function verifyTokenNode(token: string): TokenPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET);
-  } catch (error) {
+    return jwt.verify(token, JWT_SECRET) as TokenPayload;
+  } catch {
     return null;
   }
 }
@@ -41,7 +50,7 @@ function base64urlDecode(str: string): Uint8Array {
 }
 
 // Edge-runtime compatible JWT Signature Verifier using native Web Crypto API
-export async function verifyTokenEdge(token: string): Promise<any> {
+export async function verifyTokenEdge(token: string): Promise<TokenPayload | null> {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
@@ -65,7 +74,7 @@ export async function verifyTokenEdge(token: string): Promise<any> {
     const isValid = await crypto.subtle.verify(
       'HMAC',
       key,
-      signatureBytes as any,
+      signatureBytes as unknown as BufferSource,
       data
     );
 
